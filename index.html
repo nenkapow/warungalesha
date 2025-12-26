@@ -107,8 +107,14 @@
             const [products, setProducts] = useState([]); 
             const [isLoading, setIsLoading] = useState(true);
             const [cart, setCart] = useState([]);
+            
+            // --- SEARCH KASIR ---
             const [searchQuery, setSearchQuery] = useState("");
             const [activeCategory, setActiveCategory] = useState("all");
+            
+            // --- SEARCH ADMIN (BARU) ---
+            const [adminSearchQuery, setAdminSearchQuery] = useState("");
+
             const [showMobileCart, setShowMobileCart] = useState(false);
             const [lastTransaction, setLastTransaction] = useState(null); 
             const [isSharing, setIsSharing] = useState(false); 
@@ -146,6 +152,13 @@
                     return matchesSearch && matchesCategory;
                 });
             }, [products, searchQuery, activeCategory]);
+
+            // --- LOGIC ADMIN FILTER (BARU) ---
+            const filteredAdminProducts = useMemo(() => {
+                return products.filter((product) => {
+                    return product.name.toLowerCase().includes(adminSearchQuery.toLowerCase());
+                });
+            }, [products, adminSearchQuery]);
 
             const addToCart = (product) => {
                 if (product.stock <= 0) return;
@@ -250,7 +263,6 @@
                 }
             };
 
-            // --- FITUR BARU: UBAH STOK CEPAT (+/-) ---
             const handleQuickStock = async (id, delta) => {
                 try {
                     await db.collection('products').doc(id).update({
@@ -342,17 +354,33 @@
                                 ) : (
                                     <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50">
                                         <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-sm border overflow-hidden">
-                                            <div className="p-4 border-b flex justify-between items-center bg-slate-50">
-                                                <div>
-                                                    <h2 className="font-bold text-slate-800">Daftar Stok</h2>
-                                                    {products.length === 0 && <button onClick={handleSeedData} className="text-xs text-blue-600 underline mt-1 flex items-center gap-1"><Icons.Database size={12}/> Isi Data Awal</button>}
+                                            {/* HEADER ADMIN + SEARCH BARU */}
+                                            <div className="p-4 border-b bg-slate-50 sticky top-0 z-10 shadow-sm">
+                                                <div className="flex justify-between items-center mb-3">
+                                                    <div>
+                                                        <h2 className="font-bold text-slate-800">Daftar Stok</h2>
+                                                        {products.length === 0 && <button onClick={handleSeedData} className="text-xs text-blue-600 underline mt-1 flex items-center gap-1"><Icons.Database size={12}/> Isi Data Awal</button>}
+                                                    </div>
+                                                    <button onClick={() => { resetForm(); setShowAddModal(true); }} className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1 hover:bg-emerald-700 shadow-sm"><Icons.Plus/> Baru</button>
                                                 </div>
-                                                <button onClick={() => { resetForm(); setShowAddModal(true); }} className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1 hover:bg-emerald-700"><Icons.Plus/> Baru</button>
+                                                
+                                                {/* INPUT PENCARIAN ADMIN */}
+                                                <div className="relative">
+                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><Icons.Search/></span>
+                                                    <input 
+                                                        type="text" 
+                                                        placeholder="Cari stok barang..." 
+                                                        className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-slate-400 outline-none" 
+                                                        value={adminSearchQuery} 
+                                                        onChange={(e) => setAdminSearchQuery(e.target.value)} 
+                                                    />
+                                                </div>
                                             </div>
+
                                             <div className="overflow-x-auto">
                                                 <table className="w-full text-sm text-left">
                                                     <thead className="bg-slate-100 text-slate-600"><tr><th className="p-3">Barang</th><th className="p-3 text-right">Modal</th><th className="p-3 text-right">Jual</th><th className="p-3 text-center">Stok</th><th className="p-3 text-center">Aksi</th></tr></thead>
-                                                    <tbody className="divide-y">{products.map(p => (
+                                                    <tbody className="divide-y">{filteredAdminProducts.map(p => (
                                                         <tr key={p.id} className="hover:bg-slate-50">
                                                             <td className="p-3 font-medium">{p.name} <div className="text-xs text-slate-400 uppercase">{p.category}</div></td>
                                                             <td className="p-3 text-right text-slate-500">{formatRupiah(p.cost).replace(",00","")}</td>
