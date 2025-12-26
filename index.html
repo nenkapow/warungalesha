@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Warung Berkah - Kasir</title>
+    
+    <!-- 1. Panggil Tailwind CSS (Desain) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 2. Panggil React (Mesin Aplikasi) -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- 3. Panggil Alat Print Gambar -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        /* CSS Tambahan biar rapi */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; -webkit-font-smoothing: antialiased; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            @page { size: 58mm auto; margin: 0; }
+            body { background: white; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 h-screen overflow-hidden">
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // --- 1. SETUP HOOKS (Biar Rapi & Best Practice) ---
+        const { useState, useMemo, useRef } = React;
+
+        // --- 2. SETUP IKON SVG MANUAL (Ringan & Tanpa Install) ---
+        const Icons = {
+            ShoppingCart: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>,
+            Search: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>,
+            Trash2: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>,
+            Plus: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>,
+            Minus: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/></svg>,
+            Receipt: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6"/><path d="M16 12h-6"/><path d="M16 16h-6"/></svg>,
+            Settings: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>,
+            X: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>,
+            Edit3: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>,
+            Printer: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>,
+            Share2: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>,
+            CheckCircle: () => <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
+            Image: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>,
+            ChevronRight: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>,
+            Loader2: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>,
+        };
+
+        const APP_NAME = "Warung Berkah";
+        const STORE_ADDRESS = "Jl. Berkah No. 99, Semarang";
+
+        // --- 3. DATA DUMMY ---
+        const INITIAL_DATA = [
+            { id: 1, name: "Indomie Goreng", price: 3500, cost: 3100, category: "makanan", stock: 48 },
+            { id: 2, name: "Indomie Soto", price: 3000, cost: 2700, category: "makanan", stock: 24 },
+            { id: 3, name: "Telur Ayam (1kg)", price: 28000, cost: 26500, category: "sembako", stock: 10 },
+            { id: 4, name: "Beras Rojolele (5kg)", price: 72000, cost: 68000, category: "sembako", stock: 5 },
+            { id: 5, name: "Kopi Kapal Api Mix", price: 1500, cost: 1200, category: "minuman", stock: 100 },
+            { id: 6, name: "Teh Pucuk Harum", price: 4000, cost: 3200, category: "minuman", stock: 24 },
+            { id: 7, name: "Sampo Lifebuoy", price: 1000, cost: 800, category: "harian", stock: 50 },
+            { id: 8, name: "Rokok Surya 16", price: 29000, cost: 27500, category: "rokok", stock: 20 },
+            { id: 9, name: "Gula Pasir 1kg", price: 17500, cost: 16000, category: "sembako", stock: 15 },
+            { id: 10, name: "Sabun GIV Batang", price: 3500, cost: 2800, category: "harian", stock: 30 },
+        ];
+
+        const CATEGORIES = [
+            { id: 'all', label: 'Semua' },
+            { id: 'makanan', label: 'Makanan' },
+            { id: 'minuman', label: 'Minuman' },
+            { id: 'sembako', label: 'Sembako' },
+            { id: 'rokok', label: 'Rokok' },
+            { id: 'harian', label: 'Harian' },
+        ];
+
+        // --- 4. KOMPONEN UTAMA ---
+        function App() {
+            // State Hooks (Pake destructuring biar clean)
+            const [mode, setMode] = useState('pos'); 
+            const [products, setProducts] = useState(INITIAL_DATA);
+            const [cart, setCart] = useState([]);
+            const [searchQuery, setSearchQuery] = useState("");
+            const [activeCategory, setActiveCategory] = useState("all");
+            const [showMobileCart, setShowMobileCart] = useState(false);
+            const [lastTransaction, setLastTransaction] = useState(null); 
+            const [isSharing, setIsSharing] = useState(false); 
+            
+            // Admin State
+            const [isEditing, setIsEditing] = useState(null);
+            const [showAddModal, setShowAddModal] = useState(false);
+            const [formData, setFormData] = useState({ name: '', price: '', cost: '', category: 'makanan', stock: '' });
+
+            const receiptRef = useRef(null);
+
+            // Logic POS
+            const filteredProducts = useMemo(() => {
+                return products.filter((product) => {
+                    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
+                    const matchesCategory = activeCategory === 'all' || product.category === activeCategory;
+                    return matchesSearch && matchesCategory;
+                });
+            }, [products, searchQuery, activeCategory]);
+
+            const addToCart = (product) => {
+                if (product.stock <= 0) return;
+                setCart((prev) => {
+                    const existing = prev.find((item) => item.id === product.id);
+                    if (existing) {
+                        if (existing.qty >= product.stock) return prev; 
+                        return prev.map((item) => item.id === product.id ? { ...item, qty: item.qty + 1 } : item);
+                    }
+                    return [...prev, { ...product, qty: 1 }];
+                });
+            };
+
+            const updateQty = (id, delta) => {
+                const productInCart = cart.find(item => item.id === id);
+                const productInStore = products.find(p => p.id === id);
+                if (delta > 0 && productInCart.qty >= productInStore.stock) return;
+
+                setCart((prev) =>
+                    prev.map((item) => {
+                        if (item.id === id) return { ...item, qty: Math.max(0, item.qty + delta) };
+                        return item;
+                    }).filter((item) => item.qty > 0)
+                );
+            };
+
+            const removeFromCart = (id) => setCart((prev) => prev.filter(item => item.id !== id));
+
+            const handleCheckout = () => {
+                if (cart.length === 0) return;
+                const newProducts = products.map(p => {
+                    const inCart = cart.find(c => c.id === p.id);
+                    return inCart ? { ...p, stock: p.stock - inCart.qty } : p;
+                });
+                setProducts(newProducts);
+                const transactionData = {
+                    id: `TRX-${Date.now()}`,
+                    date: new Date().toLocaleString('id-ID'),
+                    items: [...cart],
+                    total: cart.reduce((s, i) => s + i.price * i.qty, 0),
+                };
+                setLastTransaction(transactionData);
+                setCart([]);
+                setShowMobileCart(false);
+            };
+
+            const handlePrint = () => { setTimeout(() => { window.print(); }, 100); };
+
+            const handleShareImage = async () => {
+                if (!receiptRef.current) return;
+                setIsSharing(true);
+                try {
+                    const canvas = await window.html2canvas(receiptRef.current, { scale: 2, backgroundColor: '#ffffff', logging: false, useCORS: true });
+                    canvas.toBlob(async (blob) => {
+                        const fileName = `Struk-${lastTransaction.id}.png`;
+                        const file = new File([blob], fileName, { type: 'image/png' });
+
+                        if (navigator.share && navigator.canShare({ files: [file] })) {
+                             try { await navigator.share({ files: [file], title: 'Struk Belanja', text: `Terima kasih sudah belanja di ${APP_NAME}!` }); } catch (err) {}
+                        } else {
+                            const url = URL.createObjectURL(blob);
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.download = fileName;
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            URL.revokeObjectURL(url);
+                            setTimeout(() => {
+                                if(window.confirm("Gambar struk didownload! Kirim WA?")) {
+                                    const message = `*${APP_NAME}*\nHalo, berikut terlampir struk belanjanya ya.\nTerima kasih!`;
+                                    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+                                }
+                            }, 500);
+                        }
+                        setIsSharing(false);
+                    }, 'image/png');
+                } catch (error) {
+                    alert("Gagal proses gambar"); setIsSharing(false);
+                }
+            };
+
+            // Admin Logic
+            const handleSaveProduct = (e) => {
+                e.preventDefault();
+                // BEST PRACTICE: Pakai radix 10 buat parseInt biar aman
+                const newProduct = {
+                    id: isEditing ? isEditing : Date.now(),
+                    name: formData.name,
+                    price: parseInt(formData.price, 10),
+                    cost: parseInt(formData.cost, 10),
+                    category: formData.category,
+                    stock: parseInt(formData.stock, 10),
+                };
+                if (isEditing) { setProducts(products.map(p => p.id === isEditing ? newProduct : p)); setIsEditing(null); }
+                else { setProducts([...products, newProduct]); }
+                setShowAddModal(false); resetForm();
+            };
+            const handleDeleteProduct = (id) => { if (window.confirm("Hapus barang?")) setProducts(products.filter(p => p.id !== id)); };
+            const prepareEdit = (p) => { setFormData(p); setIsEditing(p.id); setShowAddModal(true); };
+            const resetForm = () => { setFormData({ name: '', price: '', cost: '', category: 'makanan', stock: '' }); setIsEditing(null); };
+
+            const formatRupiah = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
+
+            return (
+                <div className="flex flex-col h-screen overflow-hidden">
+                    {/* Header */}
+                    <header className={`${mode === 'pos' ? 'bg-blue-700' : 'bg-slate-800'} text-white p-3 shadow-md flex justify-between items-center shrink-0 z-30 no-print`}>
+                        <div className="flex items-center gap-3">
+                            <div className="bg-white/20 p-2 rounded-lg">{mode === 'pos' ? <Icons.Receipt/> : <Icons.Settings/>}</div>
+                            <div>
+                                <h1 className="font-bold text-lg leading-tight">{APP_NAME}</h1>
+                                <p className="text-[10px] uppercase opacity-80">{mode === 'pos' ? 'Kasir' : 'Gudang'}</p>
+                            </div>
+                        </div>
+                        <button onClick={() => setMode(mode === 'pos' ? 'admin' : 'pos')} className="bg-black/20 hover:bg-black/30 px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 border border-white/10">
+                            {mode === 'pos' ? <>Admin <Icons.Settings/></> : <>Kasir <Icons.Receipt/></>}
+                        </button>
+                    </header>
+
+                    {/* Main */}
+                    <div className="flex flex-1 overflow-hidden relative no-print">
+                        {/* Left Side */}
+                        <div className={`flex-1 flex flex-col h-full bg-gray-50 relative ${mode === 'admin' ? 'w-full' : ''}`}>
+                            {mode === 'pos' ? (
+                                <>
+                                    <div className="bg-white p-3 shadow-sm z-20 shrink-0 space-y-3">
+                                        <div className="relative">
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><Icons.Search/></span>
+                                            <input type="text" placeholder="Cari barang..." className="w-full pl-10 pr-4 py-2.5 bg-gray-100 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                                        </div>
+                                        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                                            {CATEGORIES.map((cat) => (
+                                                <button key={cat.id} onClick={() => setActiveCategory(cat.id)} className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all ${activeCategory === cat.id ? 'bg-blue-600 text-white scale-105' : 'bg-white border border-gray-200 text-gray-600'}`}>
+                                                    {cat.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="flex-1 overflow-y-auto p-3 pb-28 md:pb-4">
+                                        <div className="grid grid-cols-2 min-[450px]:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                                            {filteredProducts.map((product) => (
+                                                <button key={product.id} onClick={() => addToCart(product)} disabled={product.stock === 0} className={`group relative flex flex-col bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden text-left transition-all active:scale-95 ${product.stock === 0 ? 'opacity-60 grayscale' : 'hover:shadow-md hover:border-blue-300'}`}>
+                                                    <div className="aspect-[4/3] w-full bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center text-4xl relative">
+                                                        {product.category === 'makanan' ? '🍜' : product.category === 'minuman' ? '🥤' : product.category === 'rokok' ? '🚬' : '📦'}
+                                                        <span className={`absolute top-2 right-2 text-[10px] px-2 py-0.5 rounded-full text-white font-bold shadow-sm ${product.stock < 10 ? 'bg-red-500' : 'bg-green-600'}`}>{product.stock}</span>
+                                                    </div>
+                                                    <div className="p-2.5 flex flex-col flex-1 justify-between">
+                                                        <h3 className="font-medium text-gray-800 text-sm leading-tight line-clamp-2 mb-1">{product.name}</h3>
+                                                        <p className="font-bold text-blue-600 text-sm">{formatRupiah(product.price).replace(",00", "")}</p>
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50">
+                                    <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-sm border overflow-hidden">
+                                        <div className="p-4 border-b flex justify-between items-center bg-slate-50">
+                                            <h2 className="font-bold text-slate-800">Daftar Stok</h2>
+                                            <button onClick={() => { resetForm(); setShowAddModal(true); }} className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1 hover:bg-emerald-700"><Icons.Plus/> Baru</button>
+                                        </div>
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-sm text-left">
+                                                <thead className="bg-slate-100 text-slate-600"><tr><th className="p-3">Barang</th><th className="p-3 text-right">Modal</th><th className="p-3 text-right">Jual</th><th className="p-3 text-center">Stok</th><th className="p-3 text-center">Aksi</th></tr></thead>
+                                                <tbody className="divide-y">{products.map(p => (<tr key={p.id} className="hover:bg-slate-50"><td className="p-3 font-medium">{p.name} <div className="text-xs text-slate-400 uppercase">{p.category}</div></td><td className="p-3 text-right text-slate-500">{formatRupiah(p.cost).replace(",00","")}</td><td className="p-3 text-right font-bold text-blue-600">{formatRupiah(p.price).replace(",00","")}</td><td className="p-3 text-center"><span className={`px-2 py-0.5 rounded text-xs font-bold ${p.stock < 10 ? 'bg-red-100 text-red-600':'bg-green-100 text-green-600'}`}>{p.stock}</span></td><td className="p-3 text-center"><div className="flex justify-center gap-1"><button onClick={() => prepareEdit(p)} className="p-1.5 text-blue-600 hover:bg-blue-100 rounded"><Icons.Edit3/></button><button onClick={() => handleDeleteProduct(p.id)} className="p-1.5 text-red-600 hover:bg-red-100 rounded"><Icons.Trash2/></button></div></td></tr>))}</tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Cart Sidebar */}
+                        {mode === 'pos' && (
+                            <>
+                                <aside className={`fixed inset-y-0 right-0 w-full md:static md:w-80 bg-white shadow-2xl md:shadow-none border-l border-gray-200 z-40 transform transition-transform duration-300 flex flex-col ${showMobileCart ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}`}>
+                                    <div className="p-3 border-b flex justify-between items-center bg-gray-50 shrink-0">
+                                        <div className="flex items-center gap-2"><div className="bg-blue-100 p-1.5 rounded text-blue-600"><Icons.ShoppingCart/></div><h2 className="font-bold text-gray-800">Keranjang</h2></div>
+                                        {cart.length > 0 && <button onClick={() => setCart([])} className="text-xs text-red-500 font-bold hover:underline">Hapus Semua</button>}
+                                        <button onClick={() => setShowMobileCart(false)} className="md:hidden p-2 text-gray-500"><Icons.X/></button>
+                                    </div>
+                                    <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                                        {cart.length === 0 ? <div className="flex flex-col items-center justify-center h-full text-gray-300 space-y-2"><Icons.ShoppingCart/><p className="text-sm">Belum ada pesanan</p></div> : cart.map(item => (
+                                            <div key={item.id} className="flex flex-col bg-white border border-gray-100 rounded-lg p-2.5 shadow-sm relative overflow-hidden">
+                                                <div className="flex justify-between items-start mb-2"><div className="pr-6"><div className="font-bold text-sm text-gray-800 leading-tight">{item.name}</div><div className="text-xs text-blue-600 font-medium mt-0.5">{formatRupiah(item.price).replace(",00","")}</div></div><button onClick={() => removeFromCart(item.id)} className="absolute top-2 right-2 text-gray-300 hover:text-red-500"><Icons.Trash2/></button></div>
+                                                <div className="flex justify-between items-end"><div className="text-sm font-bold text-gray-700">Total: {formatRupiah(item.price * item.qty).replace(",00","")}</div><div className="flex items-center gap-2 bg-gray-50 rounded-lg p-1 border border-gray-100"><button onClick={() => updateQty(item.id, -1)} className="w-6 h-6 flex items-center justify-center bg-white rounded shadow-sm hover:bg-gray-100 text-gray-600"><Icons.Minus/></button><span className="w-6 text-center text-sm font-bold">{item.qty}</span><button onClick={() => updateQty(item.id, 1)} className="w-6 h-6 flex items-center justify-center bg-blue-600 rounded shadow-sm hover:bg-blue-700 text-white"><Icons.Plus/></button></div></div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="p-3 bg-gray-50 border-t space-y-3 shrink-0 pb-safe">
+                                        <div className="flex justify-between items-center text-lg font-bold text-gray-800"><span>Total</span><span className="text-blue-600">{formatRupiah(cart.reduce((s, i) => s + i.price * i.qty, 0)).replace(",00","")}</span></div>
+                                        <button onClick={handleCheckout} disabled={cart.length === 0} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-blue-200 active:scale-95 disabled:opacity-50 disabled:active:scale-100 transition-all flex justify-center items-center gap-2"><Icons.Receipt/> Bayar</button>
+                                    </div>
+                                </aside>
+                                {!showMobileCart && cart.length > 0 && (
+                                    <div className="md:hidden fixed bottom-4 left-4 right-4 z-50 animate-in slide-in-from-bottom-4 duration-300"><button onClick={() => setShowMobileCart(true)} className="w-full bg-slate-900 text-white p-4 rounded-xl shadow-2xl flex justify-between items-center"><div className="flex items-center gap-3"><div className="bg-yellow-400 text-black font-bold w-8 h-8 rounded-full flex items-center justify-center text-xs">{cart.reduce((s,i) => s + i.qty, 0)}</div><div className="text-left"><div className="text-xs text-gray-400">Total</div><div className="font-bold text-yellow-400">{formatRupiah(cart.reduce((s, i) => s + i.price * i.qty, 0)).replace(",00","")}</div></div></div><div className="flex items-center gap-1 font-bold text-sm">Lihat <Icons.ChevronRight/></div></button></div>
+                                )}
+                            </>
+                        )}
+                    </div>
+
+                    {/* Modals */}
+                    {showAddModal && (
+                        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm no-print">
+                            <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                                <div className="p-4 border-b flex justify-between items-center bg-gray-50"><h3 className="font-bold text-gray-800">{isEditing ? 'Edit' : 'Baru'}</h3><button onClick={() => setShowAddModal(false)}><Icons.X/></button></div>
+                                <form onSubmit={handleSaveProduct} className="p-5 space-y-3">
+                                    <div><label className="text-xs font-bold text-gray-500 uppercase">Nama Produk</label><input required type="text" className="w-full border-b-2 border-gray-200 py-2 focus:border-blue-500 outline-none font-medium" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="Nama..." /></div>
+                                    <div className="grid grid-cols-2 gap-4"><div><label className="text-xs font-bold text-gray-500 uppercase">Modal</label><input required type="number" className="w-full border-b-2 border-gray-200 py-2 focus:border-blue-500 outline-none" value={formData.cost} onChange={e => setFormData({...formData, cost: e.target.value})} placeholder="0" /></div><div><label className="text-xs font-bold text-gray-500 uppercase">Jual</label><input required type="number" className="w-full border-b-2 border-gray-200 py-2 focus:border-blue-500 outline-none text-blue-600 font-bold" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} placeholder="0" /></div></div>
+                                    <div className="grid grid-cols-2 gap-4"><div><label className="text-xs font-bold text-gray-500 uppercase">Kategori</label><select className="w-full border-b-2 border-gray-200 py-2 outline-none" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}>{CATEGORIES.filter(c => c.id !== 'all').map(c => <option key={c.id} value={c.id}>{c.label}</option>)}</select></div><div><label className="text-xs font-bold text-gray-500 uppercase">Stok</label><input required type="number" className="w-full border-b-2 border-gray-200 py-2 focus:border-blue-500 outline-none" value={formData.stock} onChange={e => setFormData({...formData, stock: e.target.value})} placeholder="0" /></div></div>
+                                    <button type="submit" className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold mt-2 shadow-lg hover:bg-blue-700">{isEditing ? 'Simpan' : 'Tambah'}</button>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+
+                    {lastTransaction && (
+                        <div className="fixed inset-0 bg-black/70 z-[70] flex items-center justify-center p-4 backdrop-blur-sm no-print">
+                            <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+                                <div className="bg-green-500 p-6 text-center text-white shrink-0"><div className="bg-white/20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3"><Icons.CheckCircle/></div><h3 className="font-bold text-xl">Berhasil!</h3></div>
+                                <div className="p-6 bg-gray-100 overflow-y-auto flex-1">
+                                    <div ref={receiptRef} className="bg-white p-6 shadow-md border border-gray-200 text-sm font-mono leading-relaxed relative">
+                                        <div className="text-center mb-6"><h2 className="font-bold text-2xl uppercase tracking-widest text-slate-800 mb-1">{APP_NAME}</h2><p className="text-xs text-gray-500">{STORE_ADDRESS}</p><p className="text-xs text-gray-500 border-b-2 border-dashed border-gray-300 pb-4 mt-2">{lastTransaction.date}</p></div>
+                                        <div className="space-y-3 mb-6">{lastTransaction.items.map((item, idx) => (<div key={idx} className="flex justify-between items-start"><div className="flex-1 pr-2"><div className="font-bold text-gray-800">{item.name}</div><div className="text-xs text-gray-500">{item.qty} x {formatRupiah(item.price).replace(",00","")}</div></div><div className="font-bold text-gray-800">{formatRupiah(item.price * item.qty).replace(",00","")}</div></div>))}</div>
+                                        <div className="border-t-2 border-dashed border-gray-300 pt-4"><div className="flex justify-between items-center text-xl font-bold text-slate-900"><span>TOTAL</span><span>{formatRupiah(lastTransaction.total).replace(",00","")}</span></div></div>
+                                        <div className="text-center mt-8 pt-4 border-t border-gray-100"><p className="text-xs text-gray-400 italic">Terima kasih!</p></div>
+                                    </div>
+                                </div>
+                                <div className="p-4 bg-white border-t flex gap-3 shrink-0">
+                                    <button onClick={handlePrint} className="flex-1 flex flex-col items-center justify-center gap-1 p-3 rounded-xl hover:bg-gray-50 text-gray-700 border border-gray-200"><Icons.Printer/><span className="text-[10px] font-bold uppercase mt-1">Print</span></button>
+                                    <button onClick={handleShareImage} disabled={isSharing} className="flex-1 flex flex-col items-center justify-center gap-1 p-3 rounded-xl bg-green-50 text-green-700 border border-green-200 disabled:opacity-50">{isSharing ? <Icons.Loader2/> : <Icons.Image/>}<span className="text-[10px] font-bold uppercase mt-1">Share</span></button>
+                                    <button onClick={() => setLastTransaction(null)} className="flex-1 flex flex-col items-center justify-center gap-1 p-3 rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-200"><Icons.Plus/><span className="text-[10px] font-bold uppercase mt-1">Baru</span></button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Hidden Print Layout */}
+                    <div className="hidden print-only font-mono text-xs text-black bg-white">
+                        {lastTransaction && (
+                            <div className="max-w-[58mm] mx-auto p-2">
+                                <div className="text-center mb-4"><h1 className="font-bold text-lg uppercase">{APP_NAME}</h1><p>{STORE_ADDRESS}</p><p className="text-[10px] mt-1">{lastTransaction.date}</p></div>
+                                <div className="border-b-2 border-dashed border-black mb-2"></div>
+                                {lastTransaction.items.map((item, idx) => (<div key={idx} className="flex justify-between mb-2"><div className="flex-1 pr-2"><div>{item.name}</div><div className="text-[10px]">{item.qty} x {item.price}</div></div><div className="text-right">{item.price * item.qty}</div></div>))}
+                                <div className="border-b-2 border-dashed border-black my-2"></div>
+                                <div className="flex justify-between font-bold text-sm"><span>TOTAL</span><span>{formatRupiah(lastTransaction.total)}</span></div>
+                                <div className="text-center mt-6">Terima Kasih!</div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
