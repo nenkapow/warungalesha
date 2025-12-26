@@ -35,7 +35,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        // --- 1. SETUP HOOKS (Biar Rapi & Best Practice) ---
+        // --- 1. SETUP HOOKS (Best Practice) ---
         const { useState, useMemo, useRef } = React;
 
         // --- 2. SETUP IKON SVG MANUAL (Ringan & Tanpa Install) ---
@@ -85,7 +85,7 @@
 
         // --- 4. KOMPONEN UTAMA ---
         function App() {
-            // State Hooks (Pake destructuring biar clean)
+            // State Hooks
             const [mode, setMode] = useState('pos'); 
             const [products, setProducts] = useState(INITIAL_DATA);
             const [cart, setCart] = useState([]);
@@ -158,48 +158,66 @@
 
             const handlePrint = () => { setTimeout(() => { window.print(); }, 100); };
 
+            // --- LOGIC SHARE FINAL (AUTO SAVE + WA) ---
             const handleShareImage = async () => {
                 if (!receiptRef.current) return;
                 setIsSharing(true);
-                try {
-                    const canvas = await window.html2canvas(receiptRef.current, { scale: 2, backgroundColor: '#ffffff', logging: false, useCORS: true });
-                    canvas.toBlob(async (blob) => {
-                        const fileName = `Struk-${lastTransaction.id}.png`;
-                        const file = new File([blob], fileName, { type: 'image/png' });
 
-                        if (navigator.share && navigator.canShare({ files: [file] })) {
-                             try { await navigator.share({ files: [file], title: 'Struk Belanja', text: `Terima kasih sudah belanja di ${APP_NAME}!` }); } catch (err) {}
-                        } else {
-                            const url = URL.createObjectURL(blob);
-                            const link = document.createElement('a');
-                            link.href = url;
-                            link.download = fileName;
-                            document.body.appendChild(link);
-                            link.click();
-                            document.body.removeChild(link);
-                            URL.revokeObjectURL(url);
-                            setTimeout(() => {
-                                if(window.confirm("Gambar struk didownload! Kirim WA?")) {
-                                    const message = `*${APP_NAME}*\nHalo, berikut terlampir struk belanjanya ya.\nTerima kasih!`;
-                                    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
-                                }
-                            }, 500);
+                try {
+                    // 1. Capture Struk
+                    const canvas = await window.html2canvas(receiptRef.current, {
+                        scale: 2,
+                        backgroundColor: "#ffffff",
+                        useCORS: true
+                    });
+
+                    canvas.toBlob((blob) => {
+                        if (!blob) {
+                            alert("Gagal membuat gambar");
+                            setIsSharing(false);
+                            return;
                         }
+
+                        const fileName = `Struk-${lastTransaction.id}.png`;
+
+                        // 2. AUTO SAVE (DOWNLOAD)
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement("a");
+                        link.href = url;
+                        link.download = fileName;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(url);
+
+                        // 3. TAWARKAN BUKA WHATSAPP
+                        setTimeout(() => {
+                            if (confirm("Struk sudah tersimpan di Galeri/Download.\n\nLanjut kirim pesan WhatsApp ke pelanggan?")) {
+                                const message = `*${APP_NAME}*\nHalo, berikut terlampir struk belanjanya ya.\nTerima kasih 🙏`;
+                                window.open(
+                                    `https://wa.me/?text=${encodeURIComponent(message)}`,
+                                    "_blank"
+                                );
+                            }
+                        }, 500);
+
                         setIsSharing(false);
-                    }, 'image/png');
-                } catch (error) {
-                    alert("Gagal proses gambar"); setIsSharing(false);
+                    }, "image/png");
+
+                } catch (err) {
+                    console.error(err);
+                    alert("Gagal memproses gambar");
+                    setIsSharing(false);
                 }
             };
 
             // Admin Logic
             const handleSaveProduct = (e) => {
                 e.preventDefault();
-                // BEST PRACTICE: Pakai radix 10 buat parseInt biar aman
                 const newProduct = {
                     id: isEditing ? isEditing : Date.now(),
                     name: formData.name,
-                    price: parseInt(formData.price, 10),
+                    price: parseInt(formData.price, 10), // Base 10
                     cost: parseInt(formData.cost, 10),
                     category: formData.category,
                     stock: parseInt(formData.stock, 10),
