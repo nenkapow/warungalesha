@@ -10,10 +10,10 @@
     <!-- PENTING: Panggil File Manifest (KTP Aplikasi) -->
     <link rel="manifest" href="manifest.json">
     
-    <!-- TEMA WARNA BROWSER (Biar nyatu sama header biru) -->
+    <!-- TEMA WARNA BROWSER -->
     <meta name="theme-color" content="#1d4ed8">
     
-    <!-- KHUSUS IPHONE (iOS) BIAR FULLSCREEN -->
+    <!-- KHUSUS IPHONE (iOS) -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Warung Alesha">
@@ -51,7 +51,8 @@
         }
     </style>
 </head>
-<body class="bg-gray-100 text-gray-800 h-screen overflow-hidden select-none">
+<!-- UPDATE BODY: min-h-screen & overflow-x-hidden biar rasa Native App -->
+<body class="bg-gray-100 text-gray-800 min-h-screen overflow-x-hidden select-none">
 
     <div id="root"></div>
 
@@ -59,7 +60,7 @@
         // --- KONFIGURASI ---
         const LOGO_FILENAME = "logo.png"; 
         const APP_NAME = "Warung Alesha";
-        const STORE_ADDRESS = "Dk. Cangkringan Ds. Tambaharjo";
+        const STORE_ADDRESS = "Jl. Berkah No. 99, Semarang";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCDFvM0VD52Bq5JWj5rmO4hMaIAtHvaIXc",
@@ -531,6 +532,18 @@
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
+    </script>
+    
+    <!-- REGISTER SERVICE WORKER DI SINI (WAJIB ADA DI BAWAH) -->
+    <script>
+      if ("serviceWorker" in navigator) {
+        // Prevent registration in unsupported environments (like preview blobs) to avoid console errors
+        if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+           navigator.serviceWorker.register("service-worker.js")
+            .then(reg => console.log("Service Worker registered!", reg))
+            .catch(err => console.log("Service Worker registration failed:", err));
+        }
+      }
     </script>
 </body>
 </html>
