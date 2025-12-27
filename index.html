@@ -18,19 +18,20 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <!-- Library QR Code Wajib -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
     <style>
         body { font-family: 'Segoe UI', sans-serif; -webkit-font-smoothing: antialiased; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         
-        /* STYLE KHUSUS SCANNER FULLSCREEN */
-        #scanner-container {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #000; z-index: 9999; display: flex; flex-direction: column;
+        /* STYLE KHUSUS SCANNER (FULLSCREEN MUTLAK) */
+        #scanner-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: #000; z-index: 99999; display: flex; flex-direction: column;
         }
-        #reader { width: 100%; height: 100%; flex: 1; overflow: hidden; }
-        #reader video { object-fit: cover; width: 100% !important; height: 100% !important; }
+        #reader { width: 100%; flex: 1; position: relative; overflow: hidden; }
+        #reader video { width: 100% !important; height: 100% !important; object-fit: cover; }
         
         @media print { .no-print { display: none !important; } .print-only { display: block !important; } }
     </style>
@@ -56,7 +57,7 @@
 
         const { useState, useMemo, useRef, useEffect } = React;
 
-        // --- ICON INLINE SVG (PASTI BERWARNA & RINGAN) ---
+        // --- ICON INLINE SVG (PASTI BERWARNA) ---
         const ColorIcons = {
             Makanan: () => (
                 <svg viewBox="0 0 64 64" className="w-full h-full drop-shadow-sm">
@@ -160,6 +161,7 @@
             const [scanMode, setScanMode] = useState('pos');
             
             const receiptRef = useRef(null);
+            const scannerRef = useRef(null); 
 
             // --- LOAD DATA ---
             useEffect(() => {
@@ -171,55 +173,59 @@
                 return () => unsubscribe();
             }, []);
 
-            // --- SCANNER HANDLER MODEL A (FULLSCREEN) ---
+            // --- SCANNER LOGIC (DIRECT) ---
+            useEffect(() => {
+                if (showScanner) {
+                    const html5QrCode = new Html5Qrcode("reader");
+                    scannerRef.current = html5QrCode;
+                    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+                    html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
+                    .catch(err => {
+                        console.error("Error", err);
+                        alert("Gagal buka kamera: " + err);
+                        setShowScanner(false);
+                    });
+                } else {
+                    if (scannerRef.current) {
+                        scannerRef.current.stop().then(() => {
+                            scannerRef.current.clear();
+                            scannerRef.current = null;
+                        }).catch(err => console.error("Error stop", err));
+                    }
+                }
+                return () => {
+                    if (scannerRef.current) {
+                        scannerRef.current.stop().then(() => scannerRef.current.clear()).catch(e=>{});
+                    }
+                };
+            }, [showScanner]); 
+
+            const onScanSuccess = (decodedText) => {
+                handleScanResult(decodedText);
+                setShowScanner(false);
+            };
+
             const handleStartScan = (mode) => {
                 const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
                 if (!isSecure) {
-                    alert("⚠️ FITUR KAMERA DIBLOKIR BROWSER!\n\nHarap buka aplikasi ini lewat HTTPS (GitHub Pages) agar kamera bisa nyala.");
+                    alert("⚠️ WAJIB HTTPS! Buka di GitHub Pages/Hosting agar kamera jalan.");
                     return; 
                 }
                 setScanMode(mode);
                 setShowScanner(true);
             };
 
-            // Inisialisasi Scanner saat mode Fullscreen aktif
-            useEffect(() => {
-                let html5QrcodeScanner;
-                if (showScanner) {
-                    const onScanSuccess = (decodedText) => {
-                        handleScanResult(decodedText);
-                        // Matikan scanner segera setelah scan berhasil
-                        if (html5QrcodeScanner) {
-                            html5QrcodeScanner.clear().then(() => setShowScanner(false)).catch(() => setShowScanner(false));
-                        } else {
-                            setShowScanner(false);
-                        }
-                    };
-                    
-                    // Delay dikit biar DOM ready
-                    setTimeout(() => {
-                        html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250, aspectRatio: 1.0 }, false);
-                        html5QrcodeScanner.render(onScanSuccess, (err) => {});
-                    }, 50);
-                }
-                return () => { if (html5QrcodeScanner) html5QrcodeScanner.clear().catch(e => {}); };
-            }, [showScanner]);
-
             const handleScanResult = (code) => {
                 if (scanMode === 'pos') {
                     const product = products.find(p => p.barcode === code || p.id === code);
-                    if (product) {
-                        addToCart(product);
-                        // Feedback suara/getar bisa ditambah disini
-                    } else {
-                        alert(`Produk ${code} tidak ditemukan!`);
-                    }
+                    if (product) addToCart(product);
+                    else alert(`Produk ${code} tidak ditemukan!`);
                 } else if (scanMode === 'admin') {
                     setFormData(prev => ({ ...prev, barcode: code }));
                 }
             };
 
-            // --- HELPER RENDER ICON ---
+            // --- HELPER RENDER ICON (PASTI BERWARNA) ---
             const renderProductIcon = (cat) => {
                 switch(cat) {
                     case 'makanan': return <ColorIcons.Makanan />;
@@ -241,6 +247,14 @@
                     return matchesSearch && matchesCategory;
                 });
             }, [products, searchQuery, activeCategory]);
+
+            // --- ADMIN FILTER ---
+            const filteredAdminProducts = useMemo(() => {
+                return products.filter((product) => {
+                    const term = adminSearchQuery.toLowerCase();
+                    return product.name.toLowerCase().includes(term) || (product.barcode && product.barcode.includes(term));
+                });
+            }, [products, adminSearchQuery]);
 
             const addToCart = (product) => {
                 if (product.stock <= 0) return;
@@ -280,13 +294,46 @@
 
             const handleSaveProduct = async (e) => {
                 e.preventDefault();
-                const barcode = formData.barcode.trim() || `WA-${Date.now()}`;
-                const data = { ...formData, price: parseInt(formData.price), cost: parseInt(formData.cost), stock: parseInt(formData.stock), barcode };
+                // FIX: Barcode auto gen jika kosong
+                const barcode = formData.barcode && formData.barcode.trim() ? formData.barcode : `WA-${Date.now()}`;
+                
+                const data = { 
+                    name: formData.name,
+                    price: parseInt(formData.price), 
+                    cost: parseInt(formData.cost), 
+                    category: formData.category,
+                    stock: parseInt(formData.stock), 
+                    barcode: barcode
+                };
+                
                 if (isEditing) await db.collection('products').doc(isEditing).update(data);
                 else await db.collection('products').add(data);
                 setShowAddModal(false); resetForm();
             };
+            
+            // FIX: Handle Edit (Isi Form Data dengan Benar)
+            const prepareEdit = (p) => {
+                setFormData({
+                    name: p.name,
+                    price: p.price,
+                    cost: p.cost,
+                    category: p.category,
+                    stock: p.stock,
+                    barcode: p.barcode || ''
+                });
+                setIsEditing(p.id);
+                setShowAddModal(true);
+            };
+
             const resetForm = () => { setFormData({ name: '', price: '', cost: '', category: 'makanan', stock: '', barcode: '' }); setIsEditing(null); };
+
+            const handleQuickStock = async (id, delta) => {
+                try {
+                    await db.collection('products').doc(id).update({
+                        stock: firebase.firestore.FieldValue.increment(delta)
+                    });
+                } catch (error) { console.error("Error stock", error); }
+            };
 
             const handleSeedData = async () => {
                 const DUMMY = [
@@ -335,10 +382,9 @@
             };
 
             // --- RENDER UTAMA ---
-            // Jika Mode Scanner Aktif, TAMPILKAN SCANNER SAJA (FULLSCREEN MODEL A)
             if (showScanner) {
                 return (
-                    <div id="scanner-container">
+                    <div id="scanner-overlay">
                         <div className="bg-black p-4 flex justify-between items-center z-50">
                             <h2 className="text-white font-bold text-lg">{scanMode === 'pos' ? 'Scan Produk' : 'Scan Barcode'}</h2>
                             <button onClick={()=>setShowScanner(false)} className="bg-white/20 text-white p-2 rounded-full"><Icons.X/></button>
@@ -387,14 +433,18 @@
                                             {products.length === 0 ? <div className="h-full flex flex-col items-center justify-center text-gray-400 text-sm">Data Kosong</div> : (
                                                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 md:gap-4">
                                                     {filteredProducts.map(p => (
-                                                        <button key={p.id} onClick={() => addToCart(p)} disabled={p.stock<=0} className={`bg-white rounded-xl shadow-sm border p-2 text-left flex flex-col gap-2 relative overflow-hidden active:scale-95 transition-all ${p.stock<=0?'opacity-50 grayscale':''}`}>
-                                                            {/* ICON DIKECILIN DIKIT & RESPONSIF */}
+                                                        <button key={p.id} onClick={() => addToCart(p)} disabled={p.stock<=0} className={`bg-white rounded-xl shadow-sm border p-2 text-left flex flex-col gap-2 relative overflow-hidden active:scale-95 transition-all ${p.stock<=0?'opacity-50':''}`}>
+                                                            {/* ICON: PASTIKAN TIDAK ADA CLASS GRAYSCALE */}
                                                             <div className="w-full aspect-square flex items-center justify-center p-2 bg-gray-50 rounded-lg">
                                                                 <div className="w-10 h-10 md:w-16 md:h-16">
                                                                     {renderProductIcon(p.category)}
                                                                 </div>
                                                             </div>
                                                             <span className={`absolute top-2 right-2 text-[10px] px-1.5 rounded text-white font-bold ${p.stock<10?'bg-red-500':'bg-green-500'}`}>{p.stock}</span>
+                                                            
+                                                            {/* OVERLAY HABIS - TETEP BERWARNA TAPI ADA TULISAN */}
+                                                            {p.stock <= 0 && <div className="absolute inset-0 bg-white/60 flex items-center justify-center text-xs font-bold text-red-600 uppercase tracking-widest border-2 border-red-500 m-2 rounded">HABIS</div>}
+                                                            
                                                             <div>
                                                                 <h3 className="font-semibold text-xs text-gray-800 line-clamp-2 leading-tight h-8">{p.name}</h3>
                                                                 <p className="font-bold text-indigo-600 text-sm">{formatRupiah(p.price).replace(",00","")}</p>
@@ -419,16 +469,23 @@
                                             <div className="p-2 bg-slate-50"><input type="text" placeholder="Cari..." className="w-full px-3 py-2 bg-white border rounded-lg text-sm" value={adminSearchQuery} onChange={e=>setAdminSearchQuery(e.target.value)}/></div>
                                             <table className="w-full text-xs text-left">
                                                 <thead className="bg-slate-100 text-slate-600"><tr><th className="p-3">Produk</th><th className="p-3 text-right">Harga</th><th className="p-3 text-center">Stok</th><th className="p-3 text-center">Aksi</th></tr></thead>
-                                                <tbody className="divide-y">{filteredProducts.map(p => (
+                                                <tbody className="divide-y">{filteredAdminProducts.map(p => (
                                                     <tr key={p.id}>
                                                         <td className="p-3">
                                                             <div className="font-bold">{p.name}</div>
                                                             <div className="text-[10px] text-gray-400 uppercase">{p.category} | {p.barcode}</div>
                                                         </td>
                                                         <td className="p-3 text-right font-bold text-indigo-600">{formatRupiah(p.price).replace(",00","")}</td>
-                                                        <td className="p-3 text-center">{p.stock}</td>
+                                                        <td className="p-3 text-center">
+                                                            {/* FITUR QUICK STOCK DI KEMBALIKAN */}
+                                                            <div className="flex items-center justify-center gap-1">
+                                                                <button onClick={()=>handleQuickStock(p.id, -1)} className="bg-red-100 text-red-600 w-6 h-6 rounded flex items-center justify-center font-bold">-</button>
+                                                                <span className="w-8 text-center font-bold">{p.stock}</span>
+                                                                <button onClick={()=>handleQuickStock(p.id, 1)} className="bg-green-100 text-green-600 w-6 h-6 rounded flex items-center justify-center font-bold">+</button>
+                                                            </div>
+                                                        </td>
                                                         <td className="p-3 text-center flex justify-center gap-2">
-                                                            <button onClick={()=> { setFormData(p); setIsEditing(p.id); setShowAddModal(true); }} className="text-blue-600"><Icons.Edit3/></button>
+                                                            <button onClick={()=> prepareEdit(p)} className="text-blue-600"><Icons.Edit3/></button>
                                                             <button onClick={()=> { if(confirm("Hapus?")) db.collection('products').doc(p.id).delete(); }} className="text-red-600"><Icons.Trash2/></button>
                                                         </td>
                                                     </tr>
@@ -535,7 +592,7 @@
                         </div>
                     )}
 
-                    {/* MODAL ADD PRODUCT */}
+                    {/* MODAL ADD/EDIT PRODUCT */}
                      {showAddModal && (
                         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
                             <div className="bg-white rounded-xl w-full max-w-sm p-4">
