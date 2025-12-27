@@ -3,57 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    
-    <!-- PENTING: Settingan Layar HP -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    
-    <!-- PENTING: Panggil File Manifest (KTP Aplikasi) -->
     <link rel="manifest" href="manifest.json">
-    
-    <!-- TEMA WARNA BROWSER -->
     <meta name="theme-color" content="#4f46e5">
-    
-    <!-- KHUSUS IPHONE (iOS) -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Warung Alesha">
-    <link rel="apple-touch-icon" href="logo.png">
-
     <title>Warung Alesha - Kasir Pro</title>
     
-    <!-- 1. Tailwind CSS -->
+    <!-- LIBRARIES -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- 2. React Framework -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
-    <!-- 3. Alat Print -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
-    <!-- 4. FIREBASE (Database Otak) -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-
-    <!-- 5. BARCODE SCANNER LIBRARY -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; -webkit-font-smoothing: antialiased; }
+        body { font-family: 'Segoe UI', sans-serif; -webkit-font-smoothing: antialiased; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        /* Scanner Customization */
-        #reader { width: 100%; border-radius: 12px; overflow: hidden; }
-        #reader video { object-fit: cover; border-radius: 12px; }
-        
-        @media print {
-            .no-print { display: none !important; }
-            .print-only { display: block !important; }
-            @page { size: 58mm auto; margin: 0; }
-            body { background: white; }
-        }
+        #reader { width: 100%; border-radius: 12px; overflow: hidden; background: #000; }
+        #reader video { object-fit: cover; }
+        @media print { .no-print { display: none !important; } .print-only { display: block !important; } }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800 min-h-screen overflow-x-hidden select-none">
@@ -61,11 +33,9 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        // --- KONFIGURASI ---
+        // --- SETUP FIREBASE ---
         const LOGO_FILENAME = "logo.png"; 
         const APP_NAME = "Warung Alesha";
-        const STORE_ADDRESS = "Jl. Berkah No. 99, Semarang";
-
         const firebaseConfig = {
             apiKey: "AIzaSyCDFvM0VD52Bq5JWj5rmO4hMaIAtHvaIXc",
             authDomain: "kasir-warung-alesha.firebaseapp.com",
@@ -74,28 +44,64 @@
             messagingSenderId: "620253819594",
             appId: "1:620253819594:web:778a0a13f8c22bde987a33"
         };
-
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
         const { useState, useMemo, useRef, useEffect } = React;
 
-        // --- SAFE EMOJI (UNICODE) ---
-        // Pake kode ini biar gak error jadi huruf cina
-        const Emojis = {
-            makanan: "\u{1F354}",   // Burger
-            minuman: "\u{1F964}",   // Cup with Straw
-            sembako: "\u{1F4E6}",   // Package/Box
-            rokok: "\u{1F525}",     // Fire
-            harian: "\u{1F6D2}",    // Shopping Cart
-            default: "\u{1F3EA}"    // Convenience Store
+        // --- SOLUSI ICON: INLINE SVG BERWARNA (PASTI MUNCUL) ---
+        const ColorIcons = {
+            Makanan: () => (
+                <svg viewBox="0 0 64 64" className="w-full h-full drop-shadow-sm">
+                    <circle cx="32" cy="32" r="30" fill="#FFEDD5" /> {/* Bg Orange Muda */}
+                    <path d="M32 12c-12 0-22 6-22 14h44c0-8-10-14-22-14z" fill="#F97316"/> {/* Roti Atas */}
+                    <rect x="10" y="30" width="44" height="6" rx="3" fill="#16A34A"/> {/* Sayur */}
+                    <rect x="10" y="38" width="44" height="6" rx="3" fill="#EF4444"/> {/* Daging */}
+                    <path d="M12 46h40c0 8-10 10-20 10s-20-2-20-10z" fill="#F97316"/> {/* Roti Bawah */}
+                </svg>
+            ),
+            Minuman: () => (
+                <svg viewBox="0 0 64 64" className="w-full h-full drop-shadow-sm">
+                    <circle cx="32" cy="32" r="30" fill="#E0F2FE" /> {/* Bg Biru Muda */}
+                    <path d="M20 16l4 36h16l4-36H20z" fill="#3B82F6"/> {/* Gelas Biru */}
+                    <path d="M36 4l-4 12" stroke="#EF4444" strokeWidth="4" strokeLinecap="round"/> {/* Sedotan */}
+                    <ellipse cx="32" cy="16" rx="14" ry="4" fill="#60A5FA"/> {/* Tutup */}
+                </svg>
+            ),
+            Sembako: () => (
+                <svg viewBox="0 0 64 64" className="w-full h-full drop-shadow-sm">
+                    <circle cx="32" cy="32" r="30" fill="#D1FAE5" /> {/* Bg Hijau Muda */}
+                    <path d="M14 24h36v28H14z" fill="#D97706"/> {/* Kardus Coklat */}
+                    <path d="M14 24l18-10 18 10" fill="#F59E0B"/> {/* Tutup Atas */}
+                    <path d="M26 34h12v4H26z" fill="#92400E"/> {/* Label */}
+                </svg>
+            ),
+            Rokok: () => (
+                <svg viewBox="0 0 64 64" className="w-full h-full drop-shadow-sm">
+                    <circle cx="32" cy="32" r="30" fill="#FFE4E6" /> {/* Bg Merah Muda */}
+                    <rect x="20" y="16" width="24" height="36" rx="2" fill="#E11D48"/> {/* Bungkus Merah */}
+                    <rect x="20" y="24" width="24" height="12" fill="#FFFFFF"/> {/* Label Putih */}
+                    <path d="M26 16v-6m6 6v-6m6 6v-6" stroke="#F59E0B" strokeWidth="3"/> {/* Batang Rokok */}
+                </svg>
+            ),
+            Harian: () => (
+                <svg viewBox="0 0 64 64" className="w-full h-full drop-shadow-sm">
+                    <circle cx="32" cy="32" r="30" fill="#F3E8FF" /> {/* Bg Ungu Muda */}
+                    <path d="M22 24h20v24H22z" fill="#9333EA"/> {/* Botol Ungu */}
+                    <path d="M28 24V16h8v8" fill="#A855F7"/> {/* Leher Botol */}
+                    <path d="M26 16h12v-4H26z" fill="#6B21A8"/> {/* Tutup */}
+                </svg>
+            ),
+            Default: () => (
+                <svg viewBox="0 0 64 64" className="w-full h-full drop-shadow-sm">
+                    <circle cx="32" cy="32" r="30" fill="#F1F5F9" /> {/* Bg Abu */}
+                    <rect x="18" y="24" width="28" height="24" rx="2" fill="#64748B"/> {/* Tas */}
+                    <path d="M24 24c0-6 4-10 8-10s8 4 8 10" stroke="#64748B" strokeWidth="4" fill="none"/> {/* Gagang */}
+                </svg>
+            )
         };
 
-        // --- IKON SVG (Utility) ---
         const Icons = {
-            ShoppingCart: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>,
             Search: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>,
             Trash2: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>,
             Plus: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>,
@@ -107,19 +113,12 @@
             Printer: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>,
             CheckCircle: () => <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
             Image: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>,
-            ChevronRight: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>,
-            Loader2: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>,
             Database: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s 9-1.34 9-3V5"/></svg>,
             Wallet: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>,
             Scan: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect width="8" height="8" x="8" y="8" rx="1"/></svg>,
-            AlertTriangle: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+            AlertTriangle: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>,
+            ShoppingCart: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
         };
-
-        const DUMMY_DATA = [
-            { name: "Indomie Goreng", price: 3500, cost: 3100, category: "makanan", stock: 48, barcode: "8998866200578" },
-            { name: "Gula Pasir (1 kg)", price: 17000, cost: 15600, category: "sembako", stock: 10, barcode: "WA-001" },
-            { name: "Teh Pucuk Harum", price: 4000, cost: 3200, category: "minuman", stock: 24, barcode: "899123456789" },
-        ];
 
         const CATEGORIES = [
             { id: 'all', label: 'Semua' },
@@ -130,116 +129,94 @@
             { id: 'harian', label: 'Harian' },
         ];
 
+        // --- KOMPONEN UTAMA ---
         function App() {
             // State
             const [mode, setMode] = useState('pos'); 
             const [products, setProducts] = useState([]); 
             const [isLoading, setIsLoading] = useState(true);
             const [cart, setCart] = useState([]);
-            
-            // Search
             const [searchQuery, setSearchQuery] = useState("");
             const [activeCategory, setActiveCategory] = useState("all");
             const [adminSearchQuery, setAdminSearchQuery] = useState("");
-
             const [showMobileCart, setShowMobileCart] = useState(false);
             const [lastTransaction, setLastTransaction] = useState(null); 
             const [isSharing, setIsSharing] = useState(false); 
-            
-            // Pembayaran
             const [showPaymentModal, setShowPaymentModal] = useState(false);
             const [paymentAmount, setPaymentAmount] = useState("");
-            
-            // Admin
             const [isEditing, setIsEditing] = useState(null);
             const [showAddModal, setShowAddModal] = useState(false);
             const [formData, setFormData] = useState({ name: '', price: '', cost: '', category: 'makanan', stock: '', barcode: '' });
-            
-            // Reset & Security
             const [showResetConfirm, setShowResetConfirm] = useState(false);
             const [resetPassword, setResetPassword] = useState("");
-
-            // Scanner
             const [showScanner, setShowScanner] = useState(false);
-            const [scanMode, setScanMode] = useState('pos'); // 'pos' or 'admin'
-
+            const [scanMode, setScanMode] = useState('pos');
+            
             const receiptRef = useRef(null);
 
-            // --- 1. SINKRONISASI DATABASE (REALTIME) ---
+            // --- LOAD DATA ---
             useEffect(() => {
-                const unsubscribe = db.collection('products')
-                    .orderBy('name')
-                    .onSnapshot(snapshot => {
-                        const items = snapshot.docs.map(doc => ({
-                            id: doc.id,
-                            ...doc.data()
-                        }));
-                        setProducts(items);
-                        setIsLoading(false);
-                    }, error => {
-                        console.error("Error ambil data:", error);
-                        setIsLoading(false);
-                    });
+                const unsubscribe = db.collection('products').orderBy('name').onSnapshot(snapshot => {
+                    const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    setProducts(items);
+                    setIsLoading(false);
+                }, error => setIsLoading(false));
                 return () => unsubscribe();
             }, []);
 
-            // --- BARCODE SCANNER LOGIC ---
+            // --- SCANNER HANDLER ---
+            const handleStartScan = (mode) => {
+                // Cek Keamanan Browser
+                const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
+                if (!isSecure) {
+                    alert("⚠️ PERHATIAN: Fitur Kamera tidak muncul karena dibuka di Local/HTTP.\n\nSolusi: Upload file ini ke GitHub Pages atau Hosting HTTPS agar kamera bisa nyala.");
+                    return; // Stop, jangan paksa buka kamera
+                }
+                setScanMode(mode);
+                setShowScanner(true);
+            };
+
             useEffect(() => {
                 let html5QrcodeScanner;
                 if (showScanner) {
-                    const onScanSuccess = (decodedText, decodedResult) => {
+                    const onScanSuccess = (decodedText) => {
                         handleScanResult(decodedText);
-                        // Jangan tutup scanner otomatis biar bisa scan beruntun kalau POS, 
-                        // tapi kalau Admin (isi form) tutup aja.
-                        if (scanMode === 'admin') {
-                            setShowScanner(false);
-                        }
+                        if (scanMode === 'admin') setShowScanner(false);
                     };
-
-                    const onScanFailure = (error) => {
-                        // handle scan failure, usually better to ignore and keep scanning.
-                    };
-
-                    html5QrcodeScanner = new Html5QrcodeScanner(
-                        "reader", { fps: 10, qrbox: 250 }, /* verbose= */ false);
-                    html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+                    // Gunakan ID 'reader'
+                    setTimeout(() => {
+                        html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 }, false);
+                        html5QrcodeScanner.render(onScanSuccess, (err) => {});
+                    }, 100);
                 }
-
-                return () => {
-                    if (html5QrcodeScanner) {
-                        html5QrcodeScanner.clear().catch(error => console.error("Failed to clear html5QrcodeScanner. ", error));
-                    }
-                };
-            }, [showScanner, scanMode]);
+                return () => { if (html5QrcodeScanner) html5QrcodeScanner.clear().catch(e => {}); };
+            }, [showScanner]);
 
             const handleScanResult = (code) => {
                 if (scanMode === 'pos') {
-                    // Cari produk di database local
                     const product = products.find(p => p.barcode === code || p.id === code);
-                    if (product) {
-                        addToCart(product);
-                        // Optional: Kasih feedback visual toast
-                    } else {
-                        alert(`Produk dengan barcode ${code} tidak ditemukan!`);
-                    }
+                    if (product) addToCart(product);
+                    else alert(`Produk dengan barcode ${code} tidak ditemukan!`);
                 } else if (scanMode === 'admin') {
                     setFormData(prev => ({ ...prev, barcode: code }));
                 }
             };
 
-            // --- HELPER WARNA & ICON (SAFE EMOJI) ---
-            const getCategoryStyle = (cat) => {
+            // --- HELPER RENDER ICON (PASTI BERWARNA) ---
+            const renderProductIcon = (cat) => {
                 switch(cat) {
-                    case 'makanan': return { bg: 'bg-orange-100', text: 'text-orange-600', border: 'border-orange-200', activeBg: 'bg-orange-500', emoji: Emojis.makanan };
-                    case 'minuman': return { bg: 'bg-sky-100', text: 'text-sky-600', border: 'border-sky-200', activeBg: 'bg-sky-500', emoji: Emojis.minuman };
-                    case 'sembako': return { bg: 'bg-emerald-100', text: 'text-emerald-600', border: 'border-emerald-200', activeBg: 'bg-emerald-500', emoji: Emojis.sembako };
-                    case 'rokok': return { bg: 'bg-rose-100', text: 'text-rose-600', border: 'border-rose-200', activeBg: 'bg-rose-500', emoji: Emojis.rokok };
-                    case 'harian': return { bg: 'bg-purple-100', text: 'text-purple-600', border: 'border-purple-200', activeBg: 'bg-purple-500', emoji: Emojis.harian };
-                    default: return { bg: 'bg-slate-100', text: 'text-slate-600', border: 'border-slate-200', activeBg: 'bg-slate-700', emoji: Emojis.default };
+                    case 'makanan': return <ColorIcons.Makanan />;
+                    case 'minuman': return <ColorIcons.Minuman />;
+                    case 'sembako': return <ColorIcons.Sembako />;
+                    case 'rokok': return <ColorIcons.Rokok />;
+                    case 'harian': return <ColorIcons.Harian />;
+                    default: return <ColorIcons.Default />;
                 }
             };
 
-            // --- LOGIC POS ---
+            const formatRupiah = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
+
+            // --- FILTER ---
             const filteredProducts = useMemo(() => {
                 return products.filter((product) => {
                     const term = searchQuery.toLowerCase();
@@ -249,566 +226,314 @@
                 });
             }, [products, searchQuery, activeCategory]);
 
-            const filteredAdminProducts = useMemo(() => {
-                return products.filter((product) => {
-                    const term = adminSearchQuery.toLowerCase();
-                    return product.name.toLowerCase().includes(term) || (product.barcode && product.barcode.includes(term));
-                });
-            }, [products, adminSearchQuery]);
-
+            // --- CART LOGIC ---
             const addToCart = (product) => {
                 if (product.stock <= 0) return;
-                setCart((prev) => {
-                    const existing = prev.find((item) => item.id === product.id);
-                    if (existing) {
-                        if (existing.qty >= product.stock) return prev; 
-                        return prev.map((item) => item.id === product.id ? { ...item, qty: item.qty + 1 } : item);
+                setCart(prev => {
+                    const exist = prev.find(i => i.id === product.id);
+                    if (exist) {
+                        return exist.qty >= product.stock ? prev : prev.map(i => i.id === product.id ? { ...i, qty: i.qty + 1 } : i);
                     }
                     return [...prev, { ...product, qty: 1 }];
                 });
             };
-
             const updateQty = (id, delta) => {
-                const productInCart = cart.find(item => item.id === id);
-                const productInStore = products.find(p => p.id === id);
-                if (delta > 0 && (!productInStore || productInCart.qty >= productInStore.stock)) return;
-
-                setCart((prev) =>
-                    prev.map((item) => {
-                        if (item.id === id) return { ...item, qty: Math.max(0, item.qty + delta) };
-                        return item;
-                    }).filter((item) => item.qty > 0)
-                );
+                setCart(prev => prev.map(item => {
+                    if (item.id === id) {
+                        const product = products.find(p => p.id === id);
+                        if (delta > 0 && item.qty >= product.stock) return item;
+                        return { ...item, qty: Math.max(0, item.qty + delta) };
+                    }
+                    return item;
+                }).filter(i => i.qty > 0));
             };
-
-            const removeFromCart = (id) => setCart((prev) => prev.filter(item => item.id !== id));
             const cartTotal = useMemo(() => cart.reduce((s, i) => s + i.price * i.qty, 0), [cart]);
 
-            // --- PEMBAYARAN & CHECKOUT ---
-            const handleCheckoutClick = () => {
-                if (cart.length === 0) return;
-                setPaymentAmount(""); 
-                setShowPaymentModal(true);
-            };
-
+            // --- PAYMENT ---
             const processPayment = async () => {
-                const pay = parseInt(paymentAmount.replace(/\D/g, '') || 0); 
-                if (pay < cartTotal) {
-                    alert(`Uang kurang! Total: ${formatRupiah(cartTotal)}`);
-                    return;
-                }
+                const pay = parseInt(paymentAmount.replace(/\D/g, '') || 0);
+                if (pay < cartTotal) { alert("Uang kurang!"); return; }
                 const change = pay - cartTotal;
-                try {
-                    const batch = db.batch();
-                    cart.forEach(item => {
-                        const productRef = db.collection('products').doc(item.id);
-                        batch.update(productRef, { stock: firebase.firestore.FieldValue.increment(-item.qty) });
-                    });
-                    await batch.commit();
+                
+                const batch = db.batch();
+                cart.forEach(item => batch.update(db.collection('products').doc(item.id), { stock: firebase.firestore.FieldValue.increment(-item.qty) }));
+                await batch.commit();
 
-                    const transactionData = {
-                        id: `TRX-${Date.now()}`,
-                        date: new Date().toLocaleString('id-ID'),
-                        items: [...cart],
-                        total: cartTotal,
-                        pay: pay,
-                        change: change
-                    };
-                    setLastTransaction(transactionData);
-                    setCart([]);
-                    setShowMobileCart(false);
-                    setShowPaymentModal(false); 
-                } catch (error) {
-                    alert("Gagal update stok: " + error.message);
-                }
+                setLastTransaction({ id: `TRX-${Date.now()}`, date: new Date().toLocaleString('id-ID'), items: [...cart], total: cartTotal, pay, change });
+                setCart([]); setShowPaymentModal(false); setShowMobileCart(false);
             };
 
-            const handlePrint = () => { setTimeout(() => { window.print(); }, 100); };
-            const handleShareImage = async () => {
-                if (!receiptRef.current) return;
-                setIsSharing(true);
-                try {
-                    const canvas = await window.html2canvas(receiptRef.current, { scale: 2, backgroundColor: "#ffffff", useCORS: true });
-                    canvas.toBlob((blob) => {
-                        if(!blob) return setIsSharing(false);
-                        const fileName = `Struk-${lastTransaction.id}.png`;
-                        const url = URL.createObjectURL(blob);
-                        const link = document.createElement("a");
-                        link.href = url; link.download = fileName;
-                        document.body.appendChild(link); link.click();
-                        document.body.removeChild(link); URL.revokeObjectURL(url);
-                        setTimeout(() => {
-                            if (confirm("Struk tersimpan! Kirim WA?")) {
-                                const message = `*${APP_NAME}*\nTotal: ${formatRupiah(lastTransaction.total)}\nTerima kasih 馃檹`;
-                                window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank");
-                            }
-                        }, 500);
-                        setIsSharing(false);
-                    }, "image/png");
-                } catch (err) { alert("Gagal proses gambar"); setIsSharing(false); }
-            };
-
-            // --- ADMIN LOGIC (SAVE, DELETE, RESET) ---
+            // --- ADMIN ---
             const handleSaveProduct = async (e) => {
                 e.preventDefault();
-                // AUTO GENERATE BARCODE if Empty
-                const finalBarcode = formData.barcode.trim() === "" 
-                    ? `WA-${Date.now()}` // Generate unique ID based on time
-                    : formData.barcode;
-
-                const data = {
-                    name: formData.name,
-                    price: parseInt(formData.price, 10),
-                    cost: parseInt(formData.cost, 10),
-                    category: formData.category,
-                    stock: parseInt(formData.stock, 10),
-                    barcode: finalBarcode
-                };
-                try {
-                    if (isEditing) await db.collection('products').doc(isEditing).update(data);
-                    else await db.collection('products').add(data);
-                    setShowAddModal(false); resetForm();
-                } catch (error) { alert("Gagal simpan: " + error.message); }
+                const barcode = formData.barcode.trim() || `WA-${Date.now()}`;
+                const data = { ...formData, price: parseInt(formData.price), cost: parseInt(formData.cost), stock: parseInt(formData.stock), barcode };
+                if (isEditing) await db.collection('products').doc(isEditing).update(data);
+                else await db.collection('products').add(data);
+                setShowAddModal(false); resetForm();
             };
-
-            const handleDeleteProduct = async (id) => { 
-                if (window.confirm("Yakin hapus permanen?")) {
-                    try { await db.collection('products').doc(id).delete(); } catch (error) { alert("Gagal hapus: " + error.message); }
-                }
-            };
-
-            const handleQuickStock = async (id, delta) => {
-                try {
-                    await db.collection('products').doc(id).update({
-                        stock: firebase.firestore.FieldValue.increment(delta)
-                    });
-                } catch (error) { console.error("Gagal update stok:", error); }
-            };
-
-            // DANGEROUS: RESET DATA
-            const handleResetAllData = async () => {
-                if (resetPassword !== "CONFIRM") return;
-                try {
-                    const batch = db.batch();
-                    const snapshot = await db.collection('products').get();
-                    snapshot.docs.forEach((doc) => { batch.delete(doc.ref); });
-                    await batch.commit();
-                    setShowResetConfirm(false);
-                    setResetPassword("");
-                    alert("Semua data berhasil dihapus bersih!");
-                } catch (error) { alert("Gagal reset: " + error.message); }
-            };
+            const resetForm = () => { setFormData({ name: '', price: '', cost: '', category: 'makanan', stock: '', barcode: '' }); setIsEditing(null); };
 
             const handleSeedData = async () => {
-                if(!confirm("Isi database dengan data dummy awal?")) return;
-                try {
-                    const batch = db.batch();
-                    DUMMY_DATA.forEach(item => { const docRef = db.collection('products').doc(); batch.set(docRef, item); });
-                    await batch.commit();
-                    alert("Data berhasil diisi!");
-                } catch (error) { alert("Gagal isi data: " + error.message); }
+                const DUMMY = [
+                    { name: "Indomie Goreng", price: 3500, cost: 3100, category: "makanan", stock: 48, barcode: "899" },
+                    { name: "Teh Pucuk", price: 4000, cost: 3000, category: "minuman", stock: 24, barcode: "888" },
+                    { name: "Rokok Surya", price: 30000, cost: 28000, category: "rokok", stock: 10, barcode: "777" }
+                ];
+                const batch = db.batch();
+                DUMMY.forEach(d => batch.set(db.collection('products').doc(), d));
+                await batch.commit();
             };
 
-            const prepareEdit = (p) => { setFormData(p); setIsEditing(p.id); setShowAddModal(true); };
-            const resetForm = () => { setFormData({ name: '', price: '', cost: '', category: 'makanan', stock: '', barcode: '' }); setIsEditing(null); };
-            const formatRupiah = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
+            const handleResetAllData = async () => {
+                if (resetPassword !== "CONFIRM") return;
+                const batch = db.batch();
+                const snap = await db.collection('products').get();
+                snap.forEach(doc => batch.delete(doc.ref));
+                await batch.commit();
+                setShowResetConfirm(false);
+                alert("Data Reset!");
+            };
 
             return (
                 <div className="flex flex-col h-screen overflow-hidden">
-                    {/* Header */}
-                    <header className={`${mode === 'pos' ? 'bg-indigo-600' : 'bg-slate-800'} text-white p-3 shadow-lg flex justify-between items-center shrink-0 z-30 no-print transition-colors duration-500`}>
-                        <div className="flex items-center gap-3">
-                            <img src={LOGO_FILENAME} alt="Logo" className="h-10 w-10 object-contain rounded-lg bg-white/20 p-1" onError={(e) => e.target.style.display = 'none'} />
-                            <div>
-                                <h1 className="font-bold text-lg leading-tight tracking-wide">{APP_NAME}</h1>
-                                <p className="text-[10px] uppercase opacity-80 font-medium tracking-wider">{mode === 'pos' ? 'Kasir Pro' : 'Gudang Cloud'}</p>
-                            </div>
+                    <header className={`${mode === 'pos' ? 'bg-indigo-600' : 'bg-slate-800'} text-white p-3 shadow-lg flex justify-between items-center shrink-0 z-30 transition-colors`}>
+                        <div className="flex items-center gap-2">
+                            <img src={LOGO_FILENAME} className="h-8 w-8 rounded bg-white/20 p-1" onError={(e)=>e.target.style.display='none'}/>
+                            <h1 className="font-bold text-lg tracking-tight">{APP_NAME}</h1>
                         </div>
-                        <button onClick={() => setMode(mode === 'pos' ? 'admin' : 'pos')} className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 border border-white/20 backdrop-blur-sm transition-all active:scale-95">
-                            {mode === 'pos' ? <>Admin <Icons.Settings/></> : <>Kasir <Icons.Receipt/></>}
+                        <button onClick={() => setMode(mode === 'pos' ? 'admin' : 'pos')} className="bg-white/10 px-3 py-1.5 rounded-full text-xs font-bold border border-white/20">
+                            {mode === 'pos' ? 'Admin Panel' : 'Kasir Mode'}
                         </button>
                     </header>
 
-                    {/* Main */}
-                    <div className="flex flex-1 overflow-hidden relative no-print">
-                        {isLoading ? (
-                            <div className="absolute inset-0 z-50 bg-white flex flex-col items-center justify-center text-gray-500">
-                                <Icons.Loader2/> <span className="mt-2 text-sm font-medium">Menghubungkan ke Server...</span>
-                            </div>
-                        ) : (
-                            <>
-                            <div className={`flex-1 flex flex-col h-full bg-slate-50 relative ${mode === 'admin' ? 'w-full' : ''}`}>
+                    <div className="flex flex-1 overflow-hidden relative">
+                        {isLoading ? <div className="absolute inset-0 z-50 bg-white flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div></div> : (
+                            <div className="flex-1 flex flex-col h-full bg-slate-50 relative w-full">
                                 {mode === 'pos' ? (
                                     <>
-                                        {/* POS SEARCH & CATEGORIES */}
                                         <div className="bg-white p-3 shadow-sm z-20 shrink-0 space-y-3">
                                             <div className="flex gap-2">
                                                 <div className="relative flex-1">
                                                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><Icons.Search/></span>
-                                                    <input 
-                                                        type="text" 
-                                                        placeholder="Cari barang atau scan..." 
-                                                        className="w-full pl-10 pr-4 py-2.5 bg-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all" 
-                                                        value={searchQuery} 
-                                                        onChange={(e) => setSearchQuery(e.target.value)} 
-                                                    />
+                                                    <input type="text" placeholder="Cari..." className="w-full pl-10 pr-4 py-2 bg-slate-100 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
                                                 </div>
-                                                <button onClick={() => { setScanMode('pos'); setShowScanner(true); }} className="bg-indigo-600 text-white px-3 rounded-xl flex items-center justify-center hover:bg-indigo-700 active:scale-95 shadow-md">
-                                                    <Icons.Scan/>
-                                                </button>
+                                                <button onClick={() => handleStartScan('pos')} className="bg-indigo-600 text-white px-3 rounded-lg flex items-center justify-center shadow-sm"><Icons.Scan/></button>
                                             </div>
-
-                                            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide snap-x snap-mandatory">
-                                                {CATEGORIES.map((cat) => {
-                                                    const style = getCategoryStyle(cat.id);
-                                                    const isActive = activeCategory === cat.id;
-                                                    return (
-                                                        <button 
-                                                            key={cat.id} 
-                                                            onClick={() => setActiveCategory(cat.id)} 
-                                                            className={`
-                                                                snap-start px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all
-                                                                ${isActive ? `${style.activeBg} text-white shadow-md scale-105` : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}
-                                                            `}
-                                                        >
-                                                            {cat.label}
-                                                        </button>
-                                                    );
-                                                })}
+                                            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                                                {CATEGORIES.map(cat => (
+                                                    <button key={cat.id} onClick={() => setActiveCategory(cat.id)} className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${activeCategory === cat.id ? 'bg-indigo-600 text-white shadow' : 'bg-white border text-slate-600'}`}>{cat.label}</button>
+                                                ))}
                                             </div>
                                         </div>
 
-                                        {/* PRODUCT GRID (VIBRANT & SAFE EMOJI) */}
-                                        <div className="flex-1 overflow-y-auto p-3 pb-28 md:pb-4">
-                                            {products.length === 0 ? (
-                                                <div className="h-full flex flex-col items-center justify-center text-gray-400">
-                                                    <p>Data Kosong</p>
-                                                    <p className="text-xs">Masuk ke Admin &gt; Isi Data Awal</p>
-                                                </div>
-                                            ) : (
-                                                <div className="grid grid-cols-2 min-[450px]:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-                                                    {filteredProducts.map((product) => {
-                                                        const style = getCategoryStyle(product.category);
-                                                        return (
-                                                            <button 
-                                                                key={product.id} 
-                                                                onClick={() => addToCart(product)} 
-                                                                disabled={product.stock <= 0} 
-                                                                className={`
-                                                                    group relative flex flex-col overflow-hidden bg-white rounded-2xl shadow-sm border border-transparent 
-                                                                    text-left transition-all active:scale-95 touch-manipulation hover:shadow-lg
-                                                                    ${product.stock <= 0 ? 'opacity-60 grayscale cursor-not-allowed' : `hover:border-${style.border.split('-')[1]}-300`}
-                                                                `}
-                                                            >
-                                                                <div className={`aspect-[4/3] w-full ${style.bg} flex items-center justify-center relative transition-colors duration-300`}>
-                                                                    <div className="text-5xl transform transition-transform group-hover:scale-125 duration-300 drop-shadow-sm filter">
-                                                                        {style.emoji}
-                                                                    </div>
-                                                                    <span className={`absolute top-2 right-2 text-[10px] px-2 py-0.5 rounded-full text-white font-bold shadow-sm ${product.stock < 10 ? 'bg-red-500' : 'bg-green-600'}`}>{product.stock}</span>
+                                        <div className="flex-1 overflow-y-auto p-3 pb-24 md:pb-4">
+                                            {products.length === 0 ? <div className="h-full flex flex-col items-center justify-center text-gray-400 text-sm">Data Kosong</div> : (
+                                                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                                                    {filteredProducts.map(p => (
+                                                        <button key={p.id} onClick={() => addToCart(p)} disabled={p.stock<=0} className={`bg-white rounded-xl shadow-sm border p-2 text-left flex flex-col gap-2 relative overflow-hidden active:scale-95 transition-all ${p.stock<=0?'opacity-50 grayscale':''}`}>
+                                                            {/* ICON DIKECILIN DIKIT & RESPONSIF */}
+                                                            <div className="w-full aspect-square flex items-center justify-center p-2">
+                                                                <div className="w-12 h-12 md:w-16 md:h-16">
+                                                                    {renderProductIcon(p.category)}
                                                                 </div>
-                                                                <div className="p-3 flex flex-col flex-1 justify-between">
-                                                                    <h3 className="font-semibold text-gray-800 text-sm leading-tight line-clamp-2 mb-1 group-hover:text-indigo-600 transition-colors">{product.name}</h3>
-                                                                    <div className="flex justify-between items-center">
-                                                                        <p className="font-bold text-slate-700 text-sm">{formatRupiah(product.price).replace(",00", "")}</p>
-                                                                        {product.barcode && <span className="text-[8px] bg-gray-100 px-1 rounded text-gray-500">#{product.barcode.slice(-4)}</span>}
-                                                                    </div>
-                                                                </div>
-                                                            </button>
-                                                        );
-                                                    })}
+                                                            </div>
+                                                            <span className={`absolute top-2 right-2 text-[10px] px-1.5 rounded text-white font-bold ${p.stock<10?'bg-red-500':'bg-green-500'}`}>{p.stock}</span>
+                                                            <div>
+                                                                <h3 className="font-semibold text-xs text-gray-800 line-clamp-2 leading-tight h-8">{p.name}</h3>
+                                                                <p className="font-bold text-indigo-600 text-sm">{formatRupiah(p.price).replace(",00","")}</p>
+                                                            </div>
+                                                        </button>
+                                                    ))}
                                                 </div>
                                             )}
                                         </div>
                                     </>
                                 ) : (
-                                    // MODE ADMIN
-                                    <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50">
-                                        <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-sm border overflow-hidden">
-                                            <div className="p-4 border-b bg-slate-50 sticky top-0 z-10 shadow-sm">
-                                                <div className="flex justify-between items-center mb-3">
-                                                    <div>
-                                                        <h2 className="font-bold text-slate-800">Gudang & Stok</h2>
-                                                        <div className="flex gap-2 mt-1">
-                                                            {products.length === 0 && <button onClick={handleSeedData} className="text-xs text-indigo-600 underline flex items-center gap-1"><Icons.Database size={12}/> Isi Data</button>}
-                                                            {products.length > 0 && <button onClick={() => setShowResetConfirm(true)} className="text-xs text-red-500 underline flex items-center gap-1"><Icons.Trash2 size={12}/> Reset Data</button>}
-                                                        </div>
-                                                    </div>
-                                                    <button onClick={() => { resetForm(); setShowAddModal(true); }} className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1 hover:bg-emerald-700 shadow-sm"><Icons.Plus/> Baru</button>
-                                                </div>
-                                                <div className="relative">
-                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><Icons.Search/></span>
-                                                    <input 
-                                                        type="text" 
-                                                        placeholder="Cari nama atau barcode..." 
-                                                        className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-slate-400 outline-none" 
-                                                        value={adminSearchQuery} 
-                                                        onChange={(e) => setAdminSearchQuery(e.target.value)} 
-                                                    />
+                                    <div className="flex-1 overflow-y-auto p-4 bg-slate-50">
+                                        <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+                                            <div className="p-4 border-b flex justify-between items-center sticky top-0 bg-white z-10">
+                                                <h2 className="font-bold text-slate-800">Stok Barang</h2>
+                                                <div className="flex gap-2">
+                                                    {products.length === 0 && <button onClick={handleSeedData} className="text-xs text-indigo-600 underline">Isi Dummy</button>}
+                                                    <button onClick={() => setShowResetConfirm(true)} className="text-xs text-red-500 underline">Reset</button>
+                                                    <button onClick={() => { resetForm(); setShowAddModal(true); }} className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex gap-1 items-center"><Icons.Plus/> Barang</button>
                                                 </div>
                                             </div>
-
-                                            <div className="overflow-x-auto">
-                                                <table className="w-full text-sm text-left">
-                                                    <thead className="bg-slate-100 text-slate-600"><tr><th className="p-3">Barang</th><th className="p-3 text-right">Modal</th><th className="p-3 text-right">Jual</th><th className="p-3 text-center">Stok</th><th className="p-3 text-center">Aksi</th></tr></thead>
-                                                    <tbody className="divide-y">{filteredAdminProducts.map(p => (
-                                                        <tr key={p.id} className="hover:bg-slate-50">
-                                                            <td className="p-3 font-medium">
-                                                                <div className="font-bold text-slate-700">{p.name}</div>
-                                                                <div className="flex gap-2 text-[10px] text-slate-400 uppercase mt-0.5">
-                                                                    <span>{p.category}</span>
-                                                                    {p.barcode && <span className="bg-slate-100 px-1 rounded tracking-wider">||| {p.barcode}</span>}
-                                                                </div>
-                                                            </td>
-                                                            <td className="p-3 text-right text-slate-500">{formatRupiah(p.cost).replace(",00","")}</td>
-                                                            <td className="p-3 text-right font-bold text-indigo-600">{formatRupiah(p.price).replace(",00","")}</td>
-                                                            <td className="p-3 text-center">
-                                                                <div className="flex items-center justify-center gap-2">
-                                                                    <button onClick={() => handleQuickStock(p.id, -1)} className="w-6 h-6 bg-red-100 text-red-600 rounded hover:bg-red-200 flex items-center justify-center font-bold text-xs touch-manipulation">-</button>
-                                                                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${p.stock < 10 ? 'bg-red-100 text-red-600':'bg-green-100 text-green-600'}`}>{p.stock}</span>
-                                                                    <button onClick={() => handleQuickStock(p.id, 1)} className="w-6 h-6 bg-green-100 text-green-600 rounded hover:bg-green-200 flex items-center justify-center font-bold text-xs touch-manipulation">+</button>
-                                                                </div>
-                                                            </td>
-                                                            <td className="p-3 text-center"><div className="flex justify-center gap-1"><button onClick={() => prepareEdit(p)} className="p-1.5 text-blue-600 hover:bg-blue-100 rounded"><Icons.Edit3/></button><button onClick={() => handleDeleteProduct(p.id)} className="p-1.5 text-red-600 hover:bg-red-100 rounded"><Icons.Trash2/></button></div></td>
-                                                        </tr>
-                                                    ))}</tbody>
-                                                </table>
-                                            </div>
+                                            <div className="p-2 bg-slate-50"><input type="text" placeholder="Cari..." className="w-full px-3 py-2 bg-white border rounded-lg text-sm" value={adminSearchQuery} onChange={e=>setAdminSearchQuery(e.target.value)}/></div>
+                                            <table className="w-full text-xs text-left">
+                                                <thead className="bg-slate-100 text-slate-600"><tr><th className="p-3">Produk</th><th className="p-3 text-right">Harga</th><th className="p-3 text-center">Stok</th><th className="p-3 text-center">Aksi</th></tr></thead>
+                                                <tbody className="divide-y">{filteredProducts.map(p => (
+                                                    <tr key={p.id}>
+                                                        <td className="p-3">
+                                                            <div className="font-bold">{p.name}</div>
+                                                            <div className="text-[10px] text-gray-400 uppercase">{p.category} | {p.barcode}</div>
+                                                        </td>
+                                                        <td className="p-3 text-right font-bold text-indigo-600">{formatRupiah(p.price).replace(",00","")}</td>
+                                                        <td className="p-3 text-center">{p.stock}</td>
+                                                        <td className="p-3 text-center flex justify-center gap-2">
+                                                            <button onClick={()=> { setFormData(p); setIsEditing(p.id); setShowAddModal(true); }} className="text-blue-600"><Icons.Edit3/></button>
+                                                            <button onClick={()=> { if(confirm("Hapus?")) db.collection('products').doc(p.id).delete(); }} className="text-red-600"><Icons.Trash2/></button>
+                                                        </td>
+                                                    </tr>
+                                                ))}</tbody>
+                                            </table>
                                         </div>
                                     </div>
                                 )}
                             </div>
+                        )}
 
-                            {/* MOBILE CART */}
-                            <aside className={`
-                                fixed inset-0 z-40 bg-white
-                                transform transition-transform duration-300
-                                md:static md:inset-auto md:w-80 md:flex md:flex-col md:border-l md:border-gray-200 md:shadow-none
-                                ${showMobileCart ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}
-                                flex flex-col h-full
-                            `}>
-                                <div className="p-3 border-b flex justify-between items-center bg-gray-50 shrink-0">
-                                    <div className="flex items-center gap-2"><div className="bg-indigo-100 p-1.5 rounded text-indigo-600"><Icons.ShoppingCart/></div><h2 className="font-bold text-gray-800">Keranjang</h2></div>
-                                    <div className="flex gap-2">
-                                        {cart.length > 0 && <button onClick={() => setCart([])} className="text-xs text-red-500 font-bold hover:underline px-2 py-1">Hapus</button>}
-                                        <button onClick={() => setShowMobileCart(false)} className="md:hidden p-2 text-gray-500 bg-gray-200 rounded-full"><Icons.X/></button>
-                                    </div>
+                        {/* MOBILE CART */}
+                        {showMobileCart && (
+                            <div className="absolute inset-0 z-40 bg-white flex flex-col animate-in slide-in-from-bottom">
+                                <div className="p-3 border-b flex justify-between items-center bg-indigo-50">
+                                    <h2 className="font-bold">Keranjang</h2>
+                                    <button onClick={() => setShowMobileCart(false)} className="bg-gray-200 p-1 rounded-full"><Icons.X/></button>
                                 </div>
                                 <div className="flex-1 overflow-y-auto p-3 space-y-2">
-                                    {cart.length === 0 ? <div className="flex flex-col items-center justify-center h-full text-gray-300 space-y-2"><Icons.ShoppingCart/><p className="text-sm">Belum ada pesanan</p></div> : cart.map(item => (
-                                        <div key={item.id} className="flex flex-col bg-white border border-gray-100 rounded-lg p-2.5 shadow-sm relative overflow-hidden">
-                                            <div className="flex justify-between items-start mb-2"><div className="pr-6"><div className="font-bold text-sm text-gray-800 leading-tight">{item.name}</div><div className="text-xs text-indigo-600 font-medium mt-0.5">{formatRupiah(item.price).replace(",00","")}</div></div><button onClick={() => removeFromCart(item.id)} className="absolute top-2 right-2 text-gray-300 hover:text-red-500 p-1"><Icons.Trash2/></button></div>
-                                            <div className="flex justify-between items-end"><div className="text-sm font-bold text-gray-700">Total: {formatRupiah(item.price * item.qty).replace(",00","")}</div><div className="flex items-center gap-2 bg-gray-50 rounded-lg p-1 border border-gray-100"><button onClick={() => updateQty(item.id, -1)} className="w-8 h-8 flex items-center justify-center bg-white rounded shadow-sm hover:bg-gray-100 text-gray-600 touch-manipulation"><Icons.Minus/></button><span className="w-6 text-center text-sm font-bold">{item.qty}</span><button onClick={() => updateQty(item.id, 1)} className="w-8 h-8 flex items-center justify-center bg-indigo-600 rounded shadow-sm hover:bg-indigo-700 text-white touch-manipulation"><Icons.Plus/></button></div></div>
+                                    {cart.map(item => (
+                                        <div key={item.id} className="flex justify-between items-center border p-2 rounded-lg bg-white shadow-sm">
+                                            <div>
+                                                <div className="font-bold text-sm">{item.name}</div>
+                                                <div className="text-xs text-indigo-600">{formatRupiah(item.price * item.qty).replace(",00","")}</div>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <button onClick={()=>updateQty(item.id, -1)} className="bg-gray-100 p-1 rounded"><Icons.Minus/></button>
+                                                <span className="font-bold text-sm w-4 text-center">{item.qty}</span>
+                                                <button onClick={()=>updateQty(item.id, 1)} className="bg-indigo-600 text-white p-1 rounded"><Icons.Plus/></button>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
-                                <div className="p-3 bg-gray-50 border-t space-y-3 shrink-0 pb-safe">
-                                    <div className="flex justify-between items-center text-lg font-bold text-gray-800"><span>Total</span><span className="text-indigo-600">{formatRupiah(cartTotal).replace(",00","")}</span></div>
-                                    <button onClick={handleCheckoutClick} disabled={cart.length === 0} className="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold shadow-lg shadow-indigo-200 active:scale-95 disabled:opacity-50 disabled:active:scale-100 transition-all flex justify-center items-center gap-2 touch-manipulation"><Icons.Receipt/> Bayar Sekarang</button>
+                                <div className="p-3 border-t">
+                                    <div className="flex justify-between font-bold text-lg mb-3"><span>Total</span><span>{formatRupiah(cartTotal).replace(",00","")}</span></div>
+                                    <button onClick={() => { setShowPaymentModal(true); }} className="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold">Bayar</button>
                                 </div>
-                            </aside>
-                            {!showMobileCart && cart.length > 0 && (
-                                <div className="md:hidden fixed bottom-4 left-4 right-4 z-50 animate-in slide-in-from-bottom-4 duration-300"><button onClick={() => setShowMobileCart(true)} className="w-full bg-slate-900 text-white p-4 rounded-xl shadow-2xl flex justify-between items-center touch-manipulation"><div className="flex items-center gap-3"><div className="bg-yellow-400 text-black font-bold w-8 h-8 rounded-full flex items-center justify-center text-xs">{cart.reduce((s,i) => s + i.qty, 0)}</div><div className="text-left"><div className="text-xs text-gray-400">Total</div><div className="font-bold text-yellow-400">{formatRupiah(cartTotal).replace(",00","")}</div></div></div><div className="flex items-center gap-1 font-bold text-sm">Lihat <Icons.ChevronRight/></div></button></div>
-                            )}
-                            </>
+                            </div>
+                        )}
+
+                        {/* CART BUTTON (MOBILE) */}
+                        {!showMobileCart && cart.length > 0 && (
+                            <div className="md:hidden fixed bottom-4 left-4 right-4 z-40">
+                                <button onClick={() => setShowMobileCart(true)} className="w-full bg-slate-900 text-white p-3 rounded-xl shadow-xl flex justify-between items-center">
+                                    <div className="flex items-center gap-3">
+                                        <div className="bg-yellow-400 text-black font-bold w-6 h-6 rounded-full flex items-center justify-center text-xs">{cart.reduce((s,i)=>s+i.qty,0)}</div>
+                                        <div className="font-bold">{formatRupiah(cartTotal).replace(",00","")}</div>
+                                    </div>
+                                    <span className="text-sm font-bold">Lihat Keranjang</span>
+                                </button>
+                            </div>
                         )}
                     </div>
 
-                    {/* --- MODAL SCANNER --- */}
+                    {/* MODAL SCANNER */}
                     {showScanner && (
-                        <div className="fixed inset-0 bg-black/90 z-[80] flex flex-col items-center justify-center p-4">
-                            <div className="w-full max-w-md bg-white rounded-2xl overflow-hidden p-2 relative">
-                                <div id="reader"></div>
-                                <button onClick={() => setShowScanner(false)} className="absolute top-4 right-4 bg-white/50 p-2 rounded-full text-black"><Icons.X/></button>
+                        <div className="fixed inset-0 bg-black/90 z-[60] flex flex-col items-center justify-center p-4">
+                            <div className="w-full max-w-sm bg-white rounded-xl overflow-hidden relative">
+                                <div id="reader" className="w-full h-64 bg-black"></div>
+                                <button onClick={()=>setShowScanner(false)} className="absolute top-2 right-2 bg-white p-1 rounded-full"><Icons.X/></button>
                             </div>
-                            <p className="text-white mt-4 font-bold animate-pulse">Arahkan kamera ke Barcode</p>
-                            <p className="text-white/60 text-xs mt-1">Mode: {scanMode === 'pos' ? 'Scan Belanja' : 'Scan Input Barang'}</p>
+                            <p className="text-white mt-4 font-bold">Arahkan ke Barcode</p>
                         </div>
                     )}
 
-                    {/* --- MODAL RESET DATA (SECURITY) --- */}
-                    {showResetConfirm && (
-                        <div className="fixed inset-0 bg-black/80 z-[90] flex items-center justify-center p-4 backdrop-blur-sm">
-                            <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden p-6 text-center space-y-4 animate-in zoom-in-95">
-                                <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center text-red-600"><Icons.AlertTriangle/></div>
-                                <div>
-                                    <h3 className="font-bold text-xl text-red-600">Hapus SEMUA Data?</h3>
-                                    <p className="text-sm text-gray-500 mt-2">Data yang dihapus tidak bisa dikembalikan. Stok & riwayat akan hilang.</p>
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-gray-400 mb-1 block">Ketik "CONFIRM" untuk lanjut</label>
-                                    <input 
-                                        type="text" 
-                                        className="w-full border-2 border-red-200 rounded-lg p-2 text-center font-bold tracking-widest uppercase focus:border-red-500 outline-none"
-                                        placeholder="CONFIRM"
-                                        value={resetPassword}
-                                        onChange={(e) => setResetPassword(e.target.value.toUpperCase())}
-                                    />
-                                </div>
-                                <div className="grid grid-cols-2 gap-3 pt-2">
-                                    <button onClick={() => { setShowResetConfirm(false); setResetPassword(""); }} className="bg-gray-100 hover:bg-gray-200 py-2 rounded-lg font-bold text-gray-600">Batal</button>
-                                    <button 
-                                        onClick={handleResetAllData} 
-                                        disabled={resetPassword !== "CONFIRM"}
-                                        className="bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white py-2 rounded-lg font-bold"
-                                    >
-                                        Hapus Permanen
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* --- MODAL PEMBAYARAN --- */}
+                    {/* MODAL PAYMENT */}
                     {showPaymentModal && (
-                        <div className="fixed inset-0 bg-black/70 z-[60] flex items-end md:items-center justify-center p-4 backdrop-blur-sm no-print">
-                            <div className="bg-white rounded-t-2xl md:rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10 md:zoom-in-95 duration-200">
-                                <div className="p-4 border-b flex justify-between items-center bg-gray-50">
-                                    <h3 className="font-bold text-gray-800 flex items-center gap-2"><Icons.Wallet/> Pembayaran</h3>
-                                    <button onClick={() => setShowPaymentModal(false)} className="p-1 hover:bg-gray-200 rounded-full"><Icons.X/></button>
+                        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+                            <div className="bg-white w-full max-w-sm rounded-xl p-4 shadow-2xl">
+                                <h3 className="font-bold text-lg mb-4">Pembayaran</h3>
+                                <div className="text-center mb-4">
+                                    <div className="text-sm text-gray-500">Total Tagihan</div>
+                                    <div className="text-3xl font-bold text-indigo-600">{formatRupiah(cartTotal).replace(",00","")}</div>
                                 </div>
-                                <div className="p-6 space-y-4">
-                                    <div className="text-center">
-                                        <p className="text-xs text-gray-500 uppercase font-bold">Total Tagihan</p>
-                                        <h2 className="text-3xl font-bold text-indigo-600">{formatRupiah(cartTotal).replace(",00","")}</h2>
-                                    </div>
-                                    <div>
-                                        <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Uang Diterima</label>
-                                        <input 
-                                            type="number" 
-                                            autoFocus
-                                            className="w-full text-2xl font-bold p-3 bg-gray-100 rounded-xl border-2 border-transparent focus:border-indigo-500 focus:bg-white outline-none text-center"
-                                            placeholder="0"
-                                            value={paymentAmount}
-                                            onChange={(e) => setPaymentAmount(e.target.value)}
-                                        />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <button onClick={() => setPaymentAmount(cartTotal)} className="bg-gray-100 hover:bg-gray-200 py-2 rounded-lg text-xs font-bold text-gray-600">Uang Pas</button>
-                                        <button onClick={() => setPaymentAmount(50000)} className="bg-gray-100 hover:bg-gray-200 py-2 rounded-lg text-xs font-bold text-gray-600">Rp 50.000</button>
-                                        <button onClick={() => setPaymentAmount(100000)} className="bg-gray-100 hover:bg-gray-200 py-2 rounded-lg text-xs font-bold text-gray-600">Rp 100.000</button>
-                                        <button onClick={() => setPaymentAmount("")} className="bg-red-50 hover:bg-red-100 py-2 rounded-lg text-xs font-bold text-red-600">Reset</button>
-                                    </div>
-                                    
-                                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 flex justify-between items-center">
-                                        <span className="text-sm font-bold text-gray-500">Kembalian</span>
-                                        <span className={`text-lg font-bold ${(parseInt(paymentAmount || 0) - cartTotal) < 0 ? 'text-red-500' : 'text-green-600'}`}>
-                                            {formatRupiah(Math.max(0, parseInt(paymentAmount || 0) - cartTotal)).replace(",00","")}
-                                        </span>
-                                    </div>
-
-                                    <button 
-                                        onClick={processPayment} 
-                                        disabled={parseInt(paymentAmount || 0) < cartTotal}
-                                        className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-indigo-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                                    >
-                                        Proses Bayar
-                                    </button>
+                                <input type="number" autoFocus className="w-full border-2 border-indigo-100 rounded-lg p-3 text-center text-xl font-bold mb-4 outline-none focus:border-indigo-600" placeholder="0" value={paymentAmount} onChange={e=>setPaymentAmount(e.target.value)}/>
+                                <div className="grid grid-cols-3 gap-2 mb-4">
+                                    <button onClick={()=>setPaymentAmount(cartTotal)} className="bg-gray-100 py-2 rounded text-xs font-bold">Uang Pas</button>
+                                    <button onClick={()=>setPaymentAmount(50000)} className="bg-gray-100 py-2 rounded text-xs font-bold">50.000</button>
+                                    <button onClick={()=>setPaymentAmount(100000)} className="bg-gray-100 py-2 rounded text-xs font-bold">100.000</button>
+                                </div>
+                                <div className="flex justify-between items-center mb-4 p-2 bg-slate-50 rounded">
+                                    <span className="text-sm">Kembalian</span>
+                                    <span className="font-bold text-lg">{formatRupiah(Math.max(0, parseInt(paymentAmount||0) - cartTotal)).replace(",00","")}</span>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button onClick={()=>setShowPaymentModal(false)} className="flex-1 bg-gray-200 py-3 rounded-lg font-bold">Batal</button>
+                                    <button onClick={processPayment} disabled={parseInt(paymentAmount||0)<cartTotal} className="flex-1 bg-indigo-600 text-white py-3 rounded-lg font-bold disabled:opacity-50">Bayar</button>
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    {/* --- MODAL ADD/EDIT PRODUCT (UPDATED: BARCODE) --- */}
-                    {showAddModal && (
-                        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm no-print">
-                            <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-                                <div className="p-4 border-b flex justify-between items-center bg-gray-50"><h3 className="font-bold text-gray-800">{isEditing ? 'Edit' : 'Baru'}</h3><button onClick={() => setShowAddModal(false)}><Icons.X/></button></div>
-                                <form onSubmit={handleSaveProduct} className="p-5 space-y-3">
-                                    <div><label className="text-xs font-bold text-gray-500 uppercase">Nama Produk</label><input required type="text" className="w-full border-b-2 border-gray-200 py-2 focus:border-indigo-500 outline-none font-medium" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="Nama..." /></div>
-                                    
-                                    {/* INPUT BARCODE DENGAN TOMBOL SCAN */}
-                                    <div>
-                                        <label className="text-xs font-bold text-gray-500 uppercase">Barcode (Opsional)</label>
-                                        <div className="flex gap-2">
-                                            <input type="text" className="flex-1 border-b-2 border-gray-200 py-2 focus:border-indigo-500 outline-none font-mono text-sm" value={formData.barcode} onChange={e => setFormData({...formData, barcode: e.target.value})} placeholder="Kosong = Auto Gen" />
-                                            <button type="button" onClick={() => { setScanMode('admin'); setShowScanner(true); }} className="bg-indigo-100 text-indigo-600 p-2 rounded-lg hover:bg-indigo-200"><Icons.Scan/></button>
+                    {/* MODAL STRUK */}
+                    {lastTransaction && (
+                        <div className="fixed inset-0 bg-black/80 z-[70] flex items-center justify-center p-4">
+                            <div className="bg-white w-full max-w-sm rounded-xl overflow-hidden shadow-2xl">
+                                <div className="bg-green-500 p-4 text-center text-white"><Icons.CheckCircle/><div className="font-bold mt-1">Transaksi Sukses</div></div>
+                                <div className="p-4 bg-gray-50 max-h-[60vh] overflow-y-auto">
+                                    <div ref={receiptRef} className="bg-white p-4 text-sm font-mono border shadow-sm">
+                                        <div className="text-center mb-4 border-b pb-2">
+                                            <div className="font-bold text-lg">{APP_NAME}</div>
+                                            <div className="text-xs text-gray-500">{lastTransaction.date}</div>
                                         </div>
+                                        {lastTransaction.items.map((i,x)=>(<div key={x} className="flex justify-between mb-1"><span>{i.name} x{i.qty}</span><span>{formatRupiah(i.price*i.qty).replace(",00","")}</span></div>))}
+                                        <div className="border-t pt-2 mt-2 font-bold flex justify-between"><span>Total</span><span>{formatRupiah(lastTransaction.total).replace(",00","")}</span></div>
+                                        <div className="flex justify-between text-xs mt-1"><span>Bayar</span><span>{formatRupiah(lastTransaction.pay).replace(",00","")}</span></div>
+                                        <div className="flex justify-between text-xs"><span>Kembali</span><span>{formatRupiah(lastTransaction.change).replace(",00","")}</span></div>
                                     </div>
+                                </div>
+                                <div className="p-4 flex gap-2">
+                                    <button onClick={()=>setLastTransaction(null)} className="flex-1 border py-3 rounded-lg text-sm font-bold">Tutup</button>
+                                    <button onClick={handleShareImage} className="flex-1 bg-green-600 text-white py-3 rounded-lg text-sm font-bold flex items-center justify-center gap-1"><Icons.Share2/> WA</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
-                                    <div className="grid grid-cols-2 gap-4"><div><label className="text-xs font-bold text-gray-500 uppercase">Modal</label><input required type="number" className="w-full border-b-2 border-gray-200 py-2 focus:border-indigo-500 outline-none" value={formData.cost} onChange={e => setFormData({...formData, cost: e.target.value})} placeholder="0" /></div><div><label className="text-xs font-bold text-gray-500 uppercase">Jual</label><input required type="number" className="w-full border-b-2 border-gray-200 py-2 focus:border-indigo-500 outline-none text-indigo-600 font-bold" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} placeholder="0" /></div></div>
-                                    <div className="grid grid-cols-2 gap-4"><div><label className="text-xs font-bold text-gray-500 uppercase">Kategori</label><select className="w-full border-b-2 border-gray-200 py-2 outline-none" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}>{CATEGORIES.filter(c => c.id !== 'all').map(c => <option key={c.id} value={c.id}>{c.label}</option>)}</select></div><div><label className="text-xs font-bold text-gray-500 uppercase">Stok</label><input required type="number" className="w-full border-b-2 border-gray-200 py-2 focus:border-indigo-500 outline-none" value={formData.stock} onChange={e => setFormData({...formData, stock: e.target.value})} placeholder="0" /></div></div>
-                                    <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold mt-2 shadow-lg hover:bg-indigo-700">{isEditing ? 'Simpan' : 'Tambah'}</button>
+                    {/* MODAL RESET & ADD PRODUCT (Sama kayak sebelumnya tapi disederhanakan stylenya biar file ga kegedean) */}
+                     {showAddModal && (
+                        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+                            <div className="bg-white rounded-xl w-full max-w-sm p-4">
+                                <div className="flex justify-between mb-4"><h3 className="font-bold">Produk</h3><button onClick={()=>setShowAddModal(false)}><Icons.X/></button></div>
+                                <form onSubmit={handleSaveProduct} className="space-y-3">
+                                    <input required className="w-full border-b p-2 outline-none" placeholder="Nama Barang" value={formData.name} onChange={e=>setFormData({...formData, name: e.target.value})}/>
+                                    <div className="flex gap-2">
+                                        <input required className="w-full border-b p-2 outline-none" type="number" placeholder="Harga Jual" value={formData.price} onChange={e=>setFormData({...formData, price: e.target.value})}/>
+                                        <input required className="w-full border-b p-2 outline-none" type="number" placeholder="Modal" value={formData.cost} onChange={e=>setFormData({...formData, cost: e.target.value})}/>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <select className="w-full border-b p-2 outline-none bg-white" value={formData.category} onChange={e=>setFormData({...formData, category: e.target.value})}>{CATEGORIES.map(c=><option key={c.id} value={c.id}>{c.label}</option>)}</select>
+                                        <input required className="w-full border-b p-2 outline-none" type="number" placeholder="Stok" value={formData.stock} onChange={e=>setFormData({...formData, stock: e.target.value})}/>
+                                    </div>
+                                    <div className="flex gap-2 items-center">
+                                        <input className="w-full border-b p-2 outline-none" placeholder="Barcode (Auto)" value={formData.barcode} onChange={e=>setFormData({...formData, barcode: e.target.value})}/>
+                                        <button type="button" onClick={()=>handleStartScan('admin')} className="bg-indigo-100 p-2 rounded"><Icons.Scan/></button>
+                                    </div>
+                                    <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold">Simpan</button>
                                 </form>
                             </div>
                         </div>
                     )}
-
-                    {lastTransaction && (
-                        <div className="fixed inset-0 bg-black/70 z-[70] flex items-center justify-center p-4 backdrop-blur-sm no-print">
-                            <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
-                                <div className="bg-emerald-500 p-6 text-center text-white shrink-0"><div className="bg-white/20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3"><Icons.CheckCircle/></div><h3 className="font-bold text-xl">Berhasil!</h3></div>
-                                <div className="p-6 bg-gray-100 overflow-y-auto flex-1">
-                                    <div ref={receiptRef} className="bg-white p-6 shadow-md border border-gray-200 text-sm font-mono leading-relaxed relative">
-                                        <div className="text-center mb-6">
-                                            <img src={LOGO_FILENAME} alt="Logo" className="h-16 mx-auto mb-2 object-contain" onError={(e) => e.target.style.display = 'none'} />
-                                            <h2 className="font-bold text-2xl uppercase tracking-widest text-slate-800 mb-1">{APP_NAME}</h2>
-                                            <p className="text-xs text-gray-500">{STORE_ADDRESS}</p>
-                                            <p className="text-xs text-gray-500 border-b-2 border-dashed border-gray-300 pb-4 mt-2">{lastTransaction.date}</p>
-                                        </div>
-                                        <div className="space-y-3 mb-6">{lastTransaction.items.map((item, idx) => (<div key={idx} className="flex justify-between items-start"><div className="flex-1 pr-2"><div className="font-bold text-gray-800">{item.name}</div><div className="text-xs text-gray-500">{item.qty} x {formatRupiah(item.price).replace(",00","")}</div></div><div className="font-bold text-gray-800">{formatRupiah(item.price * item.qty).replace(",00","")}</div></div>))}</div>
-                                        
-                                        <div className="border-t-2 border-dashed border-gray-300 pt-4 space-y-1">
-                                            <div className="flex justify-between items-center text-lg font-bold text-slate-900"><span>TOTAL</span><span>{formatRupiah(lastTransaction.total).replace(",00","")}</span></div>
-                                            {lastTransaction.pay && (
-                                                <>
-                                                <div className="flex justify-between items-center text-sm text-gray-600"><span>Bayar</span><span>{formatRupiah(lastTransaction.pay).replace(",00","")}</span></div>
-                                                <div className="flex justify-between items-center text-sm text-gray-600"><span>Kembali</span><span>{formatRupiah(lastTransaction.change).replace(",00","")}</span></div>
-                                                </>
-                                            )}
-                                        </div>
-
-                                        <div className="text-center mt-8 pt-4 border-t border-gray-100"><p className="text-xs text-gray-400 italic">Terima kasih!</p></div>
-                                    </div>
-                                </div>
-                                <div className="p-4 bg-white border-t flex gap-3 shrink-0">
-                                    <button onClick={handlePrint} className="flex-1 flex flex-col items-center justify-center gap-1 p-3 rounded-xl hover:bg-gray-50 text-gray-700 border border-gray-200"><Icons.Printer/><span className="text-[10px] font-bold uppercase mt-1">Print</span></button>
-                                    <button onClick={handleShareImage} disabled={isSharing} className="flex-1 flex flex-col items-center justify-center gap-1 p-3 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 disabled:opacity-50">{isSharing ? <Icons.Loader2/> : <Icons.Image/>}<span className="text-[10px] font-bold uppercase mt-1">Share</span></button>
-                                    <button onClick={() => setLastTransaction(null)} className="flex-1 flex flex-col items-center justify-center gap-1 p-3 rounded-xl bg-indigo-600 text-white shadow-lg shadow-indigo-200"><Icons.Plus/><span className="text-[10px] font-bold uppercase mt-1">Baru</span></button>
+                    
+                    {showResetConfirm && (
+                         <div className="fixed inset-0 bg-black/80 z-[90] flex items-center justify-center p-4">
+                            <div className="bg-white rounded-xl w-full max-w-sm p-6 text-center">
+                                <div className="text-red-500 font-bold text-xl mb-2">Hapus SEMUA Data?</div>
+                                <input className="border p-2 w-full text-center uppercase font-bold mb-4" placeholder="Ketik CONFIRM" value={resetPassword} onChange={e=>setResetPassword(e.target.value.toUpperCase())}/>
+                                <div className="flex gap-2">
+                                    <button onClick={()=>setShowResetConfirm(false)} className="flex-1 bg-gray-100 py-2 rounded">Batal</button>
+                                    <button onClick={handleResetAllData} disabled={resetPassword!=="CONFIRM"} className="flex-1 bg-red-600 text-white py-2 rounded disabled:opacity-50">Hapus</button>
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    {/* Hidden Print Layout */}
-                    <div className="hidden print-only font-mono text-xs text-black bg-white">
-                        {lastTransaction && (
-                            <div className="max-w-[58mm] mx-auto p-2">
-                                <div className="text-center mb-4">
-                                    <img src={LOGO_FILENAME} alt="Logo" className="h-10 mx-auto mb-2" onError={(e) => e.target.style.display = 'none'} />
-                                    <h1 className="font-bold text-lg uppercase">{APP_NAME}</h1>
-                                    <p>{STORE_ADDRESS}</p><p className="text-[10px] mt-1">{lastTransaction.date}</p>
-                                </div>
-                                <div className="border-b-2 border-dashed border-black mb-2"></div>
-                                {lastTransaction.items.map((item, idx) => (<div key={idx} className="flex justify-between mb-2"><div className="flex-1 pr-2"><div>{item.name}</div><div className="text-[10px]">{item.qty} x {item.price}</div></div><div className="text-right">{item.price * item.qty}</div></div>))}
-                                <div className="border-b-2 border-dashed border-black my-2"></div>
-                                <div className="flex justify-between font-bold text-sm"><span>TOTAL</span><span>{formatRupiah(lastTransaction.total)}</span></div>
-                                {lastTransaction.pay && (
-                                    <>
-                                    <div className="flex justify-between text-xs mt-1"><span>Bayar</span><span>{formatRupiah(lastTransaction.pay)}</span></div>
-                                    <div className="flex justify-between text-xs"><span>Kembali</span><span>{formatRupiah(lastTransaction.change)}</span></div>
-                                    </>
-                                )}
-                                <div className="text-center mt-6">Terima Kasih!</div>
-                            </div>
-                        )}
-                    </div>
                 </div>
             );
         }
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
-    </script>
-    
-    <!-- REGISTER SERVICE WORKER -->
-    <script>
-      if ("serviceWorker" in navigator) {
-        if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
-           navigator.serviceWorker.register("service-worker.js")
-            .then(reg => console.log("Service Worker registered!", reg))
-            .catch(err => console.log("Service Worker registration failed:", err));
-        }
-      }
     </script>
 </body>
 </html>
