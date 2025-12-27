@@ -24,6 +24,7 @@
         body { font-family: 'Segoe UI', sans-serif; -webkit-font-smoothing: antialiased; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         
+        /* SCANNER FULLSCREEN */
         #scanner-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: #000; z-index: 99999; display: flex; flex-direction: column;
@@ -31,21 +32,13 @@
         #reader { width: 100%; flex: 1; overflow: hidden; background: #000; }
         #reader video { width: 100% !important; height: 100% !important; object-fit: cover; }
         
-        /* STYLE PRINT TERMAL (58mm) */
+        /* PRINT */
         @media print {
             .no-print { display: none !important; }
             .print-only { display: block !important; }
             body { background: white; }
-            /* Paksa logo muncul saat print */
-            .logo-print { display: block !important; margin: 0 auto 10px auto !important; } 
-            
-            #receipt-content { 
-                width: 58mm !important; 
-                border: none !important; 
-                box-shadow: none !important; 
-                padding: 0 !important; 
-                font-size: 10px;
-            }
+            .logo-print { display: block !important; margin: 0 auto 10px auto !important; max-height: 50px; }
+            #receipt-content { width: 58mm !important; border: none !important; box-shadow: none !important; padding: 0 !important; font-size: 10px; margin: 0; }
             @page { size: 58mm auto; margin: 0; }
         }
     </style>
@@ -73,7 +66,7 @@
 
         const { useState, useMemo, useRef, useEffect } = React;
 
-        // --- ICONS (INLINE SVG) ---
+        // --- ICONS ---
         const ColorIcons = {
             Makanan: () => <svg viewBox="0 0 64 64" className="w-full h-full drop-shadow-sm"><circle cx="32" cy="32" r="30" fill="#FFEDD5" /><path d="M32 12c-12 0-22 6-22 14h44c0-8-10-14-22-14z" fill="#F97316"/><rect x="10" y="30" width="44" height="6" rx="3" fill="#22C55E"/><rect x="10" y="38" width="44" height="6" rx="3" fill="#EF4444"/><path d="M12 46h40c0 8-10 10-20 10s-20-2-20-10z" fill="#F97316"/></svg>,
             Minuman: () => <svg viewBox="0 0 64 64" className="w-full h-full drop-shadow-sm"><circle cx="32" cy="32" r="30" fill="#E0F2FE" /><path d="M20 16l4 36h16l4-36H20z" fill="#3B82F6"/><path d="M36 4l-4 12" stroke="#EF4444" strokeWidth="4" strokeLinecap="round"/><ellipse cx="32" cy="16" rx="14" ry="4" fill="#60A5FA"/></svg>,
@@ -141,6 +134,7 @@
             
             const receiptRef = useRef(null);
             const scannerRef = useRef(null); 
+            const isScanningRef = useRef(false); // SAFETY GUARD
 
             useEffect(() => {
                 const unsubscribe = db.collection('products').orderBy('name').onSnapshot(snapshot => {
@@ -153,32 +147,68 @@
 
             useEffect(() => { if(toast) { const timer = setTimeout(() => setToast(null), 2000); return () => clearTimeout(timer); } }, [toast]);
 
-            // SCANNER
+            // --- SCANNER LIFECYCLE (CONSULTANT APPROVED) ---
             useEffect(() => {
                 if (showScanner) {
+                    if (isScanningRef.current) return;
+                    isScanningRef.current = true;
+
                     const html5QrCode = new Html5Qrcode("reader");
                     scannerRef.current = html5QrCode;
+                    
                     const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-                    html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
+                    
+                    html5QrCode.start({ facingMode: "environment" }, config, async (decodedText) => {
+                         // === KUNCI ANTI BLANK PUTIH: STOP DULUAN ===
+                         try {
+                            if (scannerRef.current) {
+                                await scannerRef.current.stop();
+                                await scannerRef.current.clear();
+                                scannerRef.current = null;
+                            }
+                         } catch (e) {
+                             console.warn("Stop error:", e);
+                         }
+                         isScanningRef.current = false;
+                         
+                         // Kasih jeda render
+                         setTimeout(() => {
+                             setShowScanner(false);
+                             handleScanResult(decodedText);
+                         }, 100);
+                    }, 
+                    (err) => { /* ignore frame error */ })
                     .catch(err => {
-                        console.error("Error", err);
+                        console.error("Camera Fail", err);
                         alert("Gagal buka kamera: " + err);
+                        isScanningRef.current = false;
                         setShowScanner(false);
                     });
-                } else {
-                    if (scannerRef.current) {
-                        scannerRef.current.stop().then(() => { scannerRef.current.clear(); scannerRef.current = null; }).catch(e => { scannerRef.current = null; });
-                    }
-                }
-                return () => { if (scannerRef.current) try { scannerRef.current.stop().then(() => scannerRef.current.clear()); } catch(e){} };
+                } 
+                
+                // TIDAK ADA CLEANUP OTOMATIS YANG AGRESIF
+                return () => {};
             }, [showScanner]); 
 
-            const onScanSuccess = (decodedText) => { setShowScanner(false); handleScanResult(decodedText); };
+            // Tombol Batal Scan
+            const handleStopScan = async () => {
+                 try {
+                    if (scannerRef.current) {
+                        await scannerRef.current.stop();
+                        await scannerRef.current.clear();
+                        scannerRef.current = null;
+                    }
+                 } catch(e) { console.log(e); }
+                 isScanningRef.current = false;
+                 setShowScanner(false);
+            };
+
             const handleStartScan = (mode) => {
                 const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
                 if (!isSecure) { alert("⚠️ WAJIB HTTPS! Buka di GitHub Pages agar kamera jalan."); return; }
                 setScanMode(mode); setShowScanner(true);
             };
+
             const handleScanResult = (code) => {
                 if (scanMode === 'pos') {
                     const product = products.find(p => p.barcode === code || p.id === code);
@@ -234,7 +264,7 @@
 
             const handlePrint = () => { setTimeout(() => { window.print(); }, 100); };
             
-            // --- FINAL SHARE FIX (IGNORE LOGO FOR CANVAS) ---
+            // --- FIX SHARE WA (STABIL + NO CROSSORIGIN) ---
             const handleShareImage = async () => {
                 if (!receiptRef.current) return;
                 setIsSharing(true);
@@ -242,9 +272,8 @@
                     setTimeout(async () => {
                         const canvas = await window.html2canvas(receiptRef.current, { 
                             scale: 2, 
-                            backgroundColor: "#ffffff",
+                            backgroundColor: "#ffffff", 
                             useCORS: true, 
-                            // RAHASIA: Skip elemen dengan class 'logo-print' agar tidak Tainted
                             ignoreElements: (element) => element.classList.contains('logo-print')
                         });
                         const image = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream");
@@ -315,9 +344,12 @@
             if (showScanner) {
                 return (
                     <div id="scanner-overlay">
-                        <div className="bg-black p-4 flex justify-between items-center z-50"><h2 className="text-white font-bold text-lg">Scan</h2><button onClick={()=>setShowScanner(false)} className="bg-white/20 text-white p-2 rounded-full"><Icons.X/></button></div>
+                        <div className="bg-black p-4 flex justify-between items-center z-50">
+                            <h2 className="text-white font-bold text-lg">{scanMode === 'pos' ? 'Scan Produk' : 'Scan Barcode'}</h2>
+                            <button onClick={handleStopScan} className="bg-white/20 text-white p-2 rounded-full"><Icons.X/></button>
+                        </div>
                         <div id="reader"></div>
-                        <div className="bg-black p-4 text-center text-white/70 text-sm">Arahkan kamera</div>
+                        <div className="bg-black p-4 text-center text-white/70 text-sm">Arahkan kamera ke barcode</div>
                     </div>
                 );
             }
@@ -334,7 +366,7 @@
                             <div className="p-6 bg-gray-50">
                                 <div ref={receiptRef} id="receipt-content" className="bg-white p-6 shadow-sm border border-gray-100 text-sm font-mono">
                                     <div className="text-center mb-6 border-b pb-4 border-dashed">
-                                        {/* LOGO DENGAN CLASS 'logo-print' AGAR BISA DI-SKIP SAAT CANVAS */}
+                                        {/* LOGO MUNCUL DI LAYAR TAPI DI-SKIP SAAT CANVAS SHARE */}
                                         <img src={LOGO_FILENAME} className="h-16 mx-auto mb-2 object-contain logo-print" onError={(e)=>e.target.style.display='none'}/>
                                         <h3 className="font-bold text-xl uppercase tracking-widest">{APP_NAME}</h3>
                                         <p className="text-xs text-gray-500">{STORE_ADDRESS}</p>
