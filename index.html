@@ -23,8 +23,15 @@
     <style>
         body { font-family: 'Segoe UI', sans-serif; -webkit-font-smoothing: antialiased; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
-        #reader { width: 100%; border-radius: 12px; overflow: hidden; background: #000; }
-        #reader video { object-fit: cover; }
+        
+        /* STYLE KHUSUS SCANNER FULLSCREEN */
+        #scanner-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 9999; display: flex; flex-direction: column;
+        }
+        #reader { width: 100%; height: 100%; flex: 1; overflow: hidden; }
+        #reader video { object-fit: cover; width: 100% !important; height: 100% !important; }
+        
         @media print { .no-print { display: none !important; } .print-only { display: block !important; } }
     </style>
 </head>
@@ -49,54 +56,54 @@
 
         const { useState, useMemo, useRef, useEffect } = React;
 
-        // --- SOLUSI ICON: INLINE SVG BERWARNA (PASTI MUNCUL) ---
+        // --- ICON INLINE SVG (PASTI BERWARNA & RINGAN) ---
         const ColorIcons = {
             Makanan: () => (
                 <svg viewBox="0 0 64 64" className="w-full h-full drop-shadow-sm">
-                    <circle cx="32" cy="32" r="30" fill="#FFEDD5" /> {/* Bg Orange Muda */}
-                    <path d="M32 12c-12 0-22 6-22 14h44c0-8-10-14-22-14z" fill="#F97316"/> {/* Roti Atas */}
-                    <rect x="10" y="30" width="44" height="6" rx="3" fill="#16A34A"/> {/* Sayur */}
-                    <rect x="10" y="38" width="44" height="6" rx="3" fill="#EF4444"/> {/* Daging */}
-                    <path d="M12 46h40c0 8-10 10-20 10s-20-2-20-10z" fill="#F97316"/> {/* Roti Bawah */}
+                    <circle cx="32" cy="32" r="30" fill="#FFEDD5" />
+                    <path d="M32 12c-12 0-22 6-22 14h44c0-8-10-14-22-14z" fill="#F97316"/>
+                    <rect x="10" y="30" width="44" height="6" rx="3" fill="#22C55E"/>
+                    <rect x="10" y="38" width="44" height="6" rx="3" fill="#EF4444"/>
+                    <path d="M12 46h40c0 8-10 10-20 10s-20-2-20-10z" fill="#F97316"/>
                 </svg>
             ),
             Minuman: () => (
                 <svg viewBox="0 0 64 64" className="w-full h-full drop-shadow-sm">
-                    <circle cx="32" cy="32" r="30" fill="#E0F2FE" /> {/* Bg Biru Muda */}
-                    <path d="M20 16l4 36h16l4-36H20z" fill="#3B82F6"/> {/* Gelas Biru */}
-                    <path d="M36 4l-4 12" stroke="#EF4444" strokeWidth="4" strokeLinecap="round"/> {/* Sedotan */}
-                    <ellipse cx="32" cy="16" rx="14" ry="4" fill="#60A5FA"/> {/* Tutup */}
+                    <circle cx="32" cy="32" r="30" fill="#E0F2FE" />
+                    <path d="M20 16l4 36h16l4-36H20z" fill="#3B82F6"/>
+                    <path d="M36 4l-4 12" stroke="#EF4444" strokeWidth="4" strokeLinecap="round"/>
+                    <ellipse cx="32" cy="16" rx="14" ry="4" fill="#60A5FA"/>
                 </svg>
             ),
             Sembako: () => (
                 <svg viewBox="0 0 64 64" className="w-full h-full drop-shadow-sm">
-                    <circle cx="32" cy="32" r="30" fill="#D1FAE5" /> {/* Bg Hijau Muda */}
-                    <path d="M14 24h36v28H14z" fill="#D97706"/> {/* Kardus Coklat */}
-                    <path d="M14 24l18-10 18 10" fill="#F59E0B"/> {/* Tutup Atas */}
-                    <path d="M26 34h12v4H26z" fill="#92400E"/> {/* Label */}
+                    <circle cx="32" cy="32" r="30" fill="#D1FAE5" />
+                    <path d="M14 24h36v28H14z" fill="#D97706"/>
+                    <path d="M14 24l18-10 18 10" fill="#F59E0B"/>
+                    <path d="M26 34h12v4H26z" fill="#92400E"/>
                 </svg>
             ),
             Rokok: () => (
                 <svg viewBox="0 0 64 64" className="w-full h-full drop-shadow-sm">
-                    <circle cx="32" cy="32" r="30" fill="#FFE4E6" /> {/* Bg Merah Muda */}
-                    <rect x="20" y="16" width="24" height="36" rx="2" fill="#E11D48"/> {/* Bungkus Merah */}
-                    <rect x="20" y="24" width="24" height="12" fill="#FFFFFF"/> {/* Label Putih */}
-                    <path d="M26 16v-6m6 6v-6m6 6v-6" stroke="#F59E0B" strokeWidth="3"/> {/* Batang Rokok */}
+                    <circle cx="32" cy="32" r="30" fill="#FFE4E6" />
+                    <rect x="22" y="16" width="20" height="32" rx="2" fill="#E11D48"/>
+                    <rect x="22" y="22" width="20" height="12" fill="#FFFFFF"/>
+                    <circle cx="32" cy="40" r="3" fill="#FCD34D"/>
                 </svg>
             ),
             Harian: () => (
                 <svg viewBox="0 0 64 64" className="w-full h-full drop-shadow-sm">
-                    <circle cx="32" cy="32" r="30" fill="#F3E8FF" /> {/* Bg Ungu Muda */}
-                    <path d="M22 24h20v24H22z" fill="#9333EA"/> {/* Botol Ungu */}
-                    <path d="M28 24V16h8v8" fill="#A855F7"/> {/* Leher Botol */}
-                    <path d="M26 16h12v-4H26z" fill="#6B21A8"/> {/* Tutup */}
+                    <circle cx="32" cy="32" r="30" fill="#F3E8FF" />
+                    <path d="M22 24h20v24H22z" fill="#9333EA"/>
+                    <path d="M28 24V16h8v8" fill="#A855F7"/>
+                    <path d="M26 16h12v-4H26z" fill="#6B21A8"/>
                 </svg>
             ),
             Default: () => (
                 <svg viewBox="0 0 64 64" className="w-full h-full drop-shadow-sm">
-                    <circle cx="32" cy="32" r="30" fill="#F1F5F9" /> {/* Bg Abu */}
-                    <rect x="18" y="24" width="28" height="24" rx="2" fill="#64748B"/> {/* Tas */}
-                    <path d="M24 24c0-6 4-10 8-10s8 4 8 10" stroke="#64748B" strokeWidth="4" fill="none"/> {/* Gagang */}
+                    <circle cx="32" cy="32" r="30" fill="#F1F5F9" />
+                    <rect x="18" y="24" width="28" height="24" rx="2" fill="#64748B"/>
+                    <path d="M24 24c0-6 4-10 8-10s8 4 8 10" stroke="#64748B" strokeWidth="4" fill="none"/>
                 </svg>
             )
         };
@@ -164,30 +171,36 @@
                 return () => unsubscribe();
             }, []);
 
-            // --- SCANNER HANDLER ---
+            // --- SCANNER HANDLER MODEL A (FULLSCREEN) ---
             const handleStartScan = (mode) => {
-                // Cek Keamanan Browser
                 const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
                 if (!isSecure) {
-                    alert("⚠️ PERHATIAN: Fitur Kamera tidak muncul karena dibuka di Local/HTTP.\n\nSolusi: Upload file ini ke GitHub Pages atau Hosting HTTPS agar kamera bisa nyala.");
-                    return; // Stop, jangan paksa buka kamera
+                    alert("⚠️ FITUR KAMERA DIBLOKIR BROWSER!\n\nHarap buka aplikasi ini lewat HTTPS (GitHub Pages) agar kamera bisa nyala.");
+                    return; 
                 }
                 setScanMode(mode);
                 setShowScanner(true);
             };
 
+            // Inisialisasi Scanner saat mode Fullscreen aktif
             useEffect(() => {
                 let html5QrcodeScanner;
                 if (showScanner) {
                     const onScanSuccess = (decodedText) => {
                         handleScanResult(decodedText);
-                        if (scanMode === 'admin') setShowScanner(false);
+                        // Matikan scanner segera setelah scan berhasil
+                        if (html5QrcodeScanner) {
+                            html5QrcodeScanner.clear().then(() => setShowScanner(false)).catch(() => setShowScanner(false));
+                        } else {
+                            setShowScanner(false);
+                        }
                     };
-                    // Gunakan ID 'reader'
+                    
+                    // Delay dikit biar DOM ready
                     setTimeout(() => {
-                        html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 }, false);
+                        html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250, aspectRatio: 1.0 }, false);
                         html5QrcodeScanner.render(onScanSuccess, (err) => {});
-                    }, 100);
+                    }, 50);
                 }
                 return () => { if (html5QrcodeScanner) html5QrcodeScanner.clear().catch(e => {}); };
             }, [showScanner]);
@@ -195,14 +208,18 @@
             const handleScanResult = (code) => {
                 if (scanMode === 'pos') {
                     const product = products.find(p => p.barcode === code || p.id === code);
-                    if (product) addToCart(product);
-                    else alert(`Produk dengan barcode ${code} tidak ditemukan!`);
+                    if (product) {
+                        addToCart(product);
+                        // Feedback suara/getar bisa ditambah disini
+                    } else {
+                        alert(`Produk ${code} tidak ditemukan!`);
+                    }
                 } else if (scanMode === 'admin') {
                     setFormData(prev => ({ ...prev, barcode: code }));
                 }
             };
 
-            // --- HELPER RENDER ICON (PASTI BERWARNA) ---
+            // --- HELPER RENDER ICON ---
             const renderProductIcon = (cat) => {
                 switch(cat) {
                     case 'makanan': return <ColorIcons.Makanan />;
@@ -216,7 +233,6 @@
 
             const formatRupiah = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
 
-            // --- FILTER ---
             const filteredProducts = useMemo(() => {
                 return products.filter((product) => {
                     const term = searchQuery.toLowerCase();
@@ -226,7 +242,6 @@
                 });
             }, [products, searchQuery, activeCategory]);
 
-            // --- CART LOGIC ---
             const addToCart = (product) => {
                 if (product.stock <= 0) return;
                 setCart(prev => {
@@ -247,9 +262,9 @@
                     return item;
                 }).filter(i => i.qty > 0));
             };
+            const removeFromCart = (id) => setCart((prev) => prev.filter(item => item.id !== id));
             const cartTotal = useMemo(() => cart.reduce((s, i) => s + i.price * i.qty, 0), [cart]);
 
-            // --- PAYMENT ---
             const processPayment = async () => {
                 const pay = parseInt(paymentAmount.replace(/\D/g, '') || 0);
                 if (pay < cartTotal) { alert("Uang kurang!"); return; }
@@ -263,7 +278,6 @@
                 setCart([]); setShowPaymentModal(false); setShowMobileCart(false);
             };
 
-            // --- ADMIN ---
             const handleSaveProduct = async (e) => {
                 e.preventDefault();
                 const barcode = formData.barcode.trim() || `WA-${Date.now()}`;
@@ -294,6 +308,48 @@
                 setShowResetConfirm(false);
                 alert("Data Reset!");
             };
+
+            const handlePrint = () => { setTimeout(() => { window.print(); }, 100); };
+            const handleShareImage = async () => {
+                if (!receiptRef.current) return;
+                setIsSharing(true);
+                try {
+                    const canvas = await window.html2canvas(receiptRef.current, { scale: 2, backgroundColor: "#ffffff", useCORS: true });
+                    canvas.toBlob((blob) => {
+                        if(!blob) return setIsSharing(false);
+                        const fileName = `Struk-${lastTransaction.id}.png`;
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement("a");
+                        link.href = url; link.download = fileName;
+                        document.body.appendChild(link); link.click();
+                        document.body.removeChild(link); URL.revokeObjectURL(url);
+                        setTimeout(() => {
+                            if (confirm("Struk tersimpan! Kirim WA?")) {
+                                const message = `*${APP_NAME}*\nHalo, berikut terlampir struk belanjanya ya.\nTerima kasih 馃檹`;
+                                window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank");
+                            }
+                        }, 500);
+                        setIsSharing(false);
+                    }, "image/png");
+                } catch (err) { alert("Gagal proses gambar"); setIsSharing(false); }
+            };
+
+            // --- RENDER UTAMA ---
+            // Jika Mode Scanner Aktif, TAMPILKAN SCANNER SAJA (FULLSCREEN MODEL A)
+            if (showScanner) {
+                return (
+                    <div id="scanner-container">
+                        <div className="bg-black p-4 flex justify-between items-center z-50">
+                            <h2 className="text-white font-bold text-lg">{scanMode === 'pos' ? 'Scan Produk' : 'Scan Barcode'}</h2>
+                            <button onClick={()=>setShowScanner(false)} className="bg-white/20 text-white p-2 rounded-full"><Icons.X/></button>
+                        </div>
+                        <div id="reader"></div>
+                        <div className="bg-black p-4 text-center text-white/70 text-sm">
+                            Arahkan kamera ke barcode produk
+                        </div>
+                    </div>
+                );
+            }
 
             return (
                 <div className="flex flex-col h-screen overflow-hidden">
@@ -329,12 +385,12 @@
 
                                         <div className="flex-1 overflow-y-auto p-3 pb-24 md:pb-4">
                                             {products.length === 0 ? <div className="h-full flex flex-col items-center justify-center text-gray-400 text-sm">Data Kosong</div> : (
-                                                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                                                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 md:gap-4">
                                                     {filteredProducts.map(p => (
                                                         <button key={p.id} onClick={() => addToCart(p)} disabled={p.stock<=0} className={`bg-white rounded-xl shadow-sm border p-2 text-left flex flex-col gap-2 relative overflow-hidden active:scale-95 transition-all ${p.stock<=0?'opacity-50 grayscale':''}`}>
                                                             {/* ICON DIKECILIN DIKIT & RESPONSIF */}
-                                                            <div className="w-full aspect-square flex items-center justify-center p-2">
-                                                                <div className="w-12 h-12 md:w-16 md:h-16">
+                                                            <div className="w-full aspect-square flex items-center justify-center p-2 bg-gray-50 rounded-lg">
+                                                                <div className="w-10 h-10 md:w-16 md:h-16">
                                                                     {renderProductIcon(p.category)}
                                                                 </div>
                                                             </div>
@@ -427,17 +483,6 @@
                         )}
                     </div>
 
-                    {/* MODAL SCANNER */}
-                    {showScanner && (
-                        <div className="fixed inset-0 bg-black/90 z-[60] flex flex-col items-center justify-center p-4">
-                            <div className="w-full max-w-sm bg-white rounded-xl overflow-hidden relative">
-                                <div id="reader" className="w-full h-64 bg-black"></div>
-                                <button onClick={()=>setShowScanner(false)} className="absolute top-2 right-2 bg-white p-1 rounded-full"><Icons.X/></button>
-                            </div>
-                            <p className="text-white mt-4 font-bold">Arahkan ke Barcode</p>
-                        </div>
-                    )}
-
                     {/* MODAL PAYMENT */}
                     {showPaymentModal && (
                         <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
@@ -490,7 +535,7 @@
                         </div>
                     )}
 
-                    {/* MODAL RESET & ADD PRODUCT (Sama kayak sebelumnya tapi disederhanakan stylenya biar file ga kegedean) */}
+                    {/* MODAL ADD PRODUCT */}
                      {showAddModal && (
                         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
                             <div className="bg-white rounded-xl w-full max-w-sm p-4">
@@ -534,6 +579,17 @@
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
+    </script>
+    
+    <!-- REGISTER SERVICE WORKER DI SINI (WAJIB ADA DI BAWAH) -->
+    <script>
+      if ("serviceWorker" in navigator) {
+        if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+           navigator.serviceWorker.register("service-worker.js")
+            .then(reg => console.log("Service Worker registered!", reg))
+            .catch(err => console.log("Service Worker registration failed:", err));
+        }
+      }
     </script>
 </body>
 </html>
