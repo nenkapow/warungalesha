@@ -97,7 +97,8 @@
             TrendingUp: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>,
             ShoppingBag: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><line x1="3" x2="21" y1="6" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>,
             Calendar: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>,
-            DollarSign: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            DollarSign: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>,
+            Filter: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
         };
 
         const CATEGORIES = [
@@ -120,8 +121,9 @@
             const [activeCategory, setActiveCategory] = useState("all");
             
             // --- NEW ADMIN STATE ---
-            const [adminTab, setAdminTab] = useState('stock'); // 'stock', 'restock', 'report'
+            const [adminTab, setAdminTab] = useState('stock'); 
             const [adminSearchQuery, setAdminSearchQuery] = useState("");
+            const [showLowStockOnly, setShowLowStockOnly] = useState(false); // FILTER STATE
             
             const [showMobileCart, setShowMobileCart] = useState(false);
             const [toast, setToast] = useState(null); 
@@ -137,12 +139,10 @@
             const [showResetConfirm, setShowResetConfirm] = useState(false);
             const [resetPassword, setResetPassword] = useState("");
             
-            // --- RESTOCK STATE ---
             const [restockItem, setRestockItem] = useState(null);
             const [restockData, setRestockData] = useState({ qty: '', totalCost: '' });
             
-            // --- REPORT STATE ---
-            const [reportFilter, setReportFilter] = useState('today'); // 'today', 'all'
+            const [reportFilter, setReportFilter] = useState('today'); 
             const [reportStats, setReportStats] = useState({ omset: 0, profit: 0, itemsSold: 0 });
             
             const [showScanner, setShowScanner] = useState(false);
@@ -166,7 +166,6 @@
                 if (mode === 'admin' && adminTab === 'report') {
                     const fetchReport = async () => {
                         let query = db.collection('transactions');
-                        // Simple filtering in JS to avoid index requirement
                         const snap = await query.limit(500).get();
                         let docs = snap.docs.map(d => d.data());
                         
@@ -267,7 +266,6 @@
                 }
             };
 
-            // --- CART LOGIC ---
             const addToCart = (product) => {
                 const stock = Number(product.stock) || 0;
                 if (stock <= 0) { setToast({ msg: "Stok Habis!", type: "error" }); return; }
@@ -360,7 +358,6 @@
                 setShowAddModal(false); resetForm();
             };
             
-            // --- NEW: HANDLE RESTOCK (KULAKAN) ---
             const handleRestockSubmit = async (e) => {
                 e.preventDefault();
                 if (!restockItem) return;
@@ -369,21 +366,16 @@
                 const totalCost = parseInt(restockData.totalCost);
                 if (qty <= 0 || totalCost <= 0) { alert("Jumlah dan Modal harus diisi!"); return; }
 
-                // HITUNG MODAL BARU (Average atau Replace? User minta: Update Cost)
                 const newUnitCost = Math.ceil(totalCost / qty);
-                const isCostChanged = newUnitCost !== restockItem.cost;
 
                 try {
                     const batch = db.batch();
-                    
-                    // 1. Update Stok & Cost Produk
                     const productRef = db.collection('products').doc(restockItem.id);
                     batch.update(productRef, { 
                         stock: firebase.firestore.FieldValue.increment(qty),
-                        cost: newUnitCost // Update Master Cost otomatis sesuai belanja terakhir
+                        cost: newUnitCost 
                     });
 
-                    // 2. Simpan History Belanja
                     const purchaseRef = db.collection('purchases').doc();
                     batch.set(purchaseRef, {
                         date: new Date().toISOString(),
@@ -429,7 +421,27 @@
                 return (p.name.toLowerCase().includes(term) || (p.barcode || "").includes(term)) && (activeCategory === 'all' || p.category === activeCategory);
             }), [products, searchQuery, activeCategory]);
             
-            const filteredAdminProducts = useMemo(() => products.filter(p => p.name.toLowerCase().includes(adminSearchQuery.toLowerCase()) || (p.barcode || "").includes(adminSearchQuery)), [products, adminSearchQuery]);
+            // --- UPDATED: FILTER + AUTO SORT LOGIC ---
+            const filteredAdminProducts = useMemo(() => {
+                // 1. FILTERING
+                let result = products.filter(p => {
+                    const term = adminSearchQuery.toLowerCase();
+                    const matchesSearch = p.name.toLowerCase().includes(term) || (p.barcode || "").includes(term);
+                    const matchesLowStock = showLowStockOnly ? (Number(p.stock) || 0) < 5 : true;
+                    return matchesSearch && matchesLowStock;
+                });
+
+                // 2. AUTO-SORT (Hanya aktif kalo tombol "Stok Menipis" NYALA)
+                if (showLowStockOnly) {
+                    // Sort dari stok TERKECIL (0, 1, 2...) ke besar
+                    result.sort((a, b) => (Number(a.stock)||0) - (Number(b.stock)||0));
+                } else {
+                    // Kalau mati, sort normal berdasarkan Nama (A-Z)
+                    result.sort((a, b) => a.name.localeCompare(b.name));
+                }
+
+                return result;
+            }, [products, adminSearchQuery, showLowStockOnly]);
 
             if (showScanner) {
                 return (
@@ -543,8 +555,17 @@
                                             {adminTab === 'stock' && (
                                                 <div className="bg-white rounded-xl shadow-sm border">
                                                     <div className="p-4 border-b flex justify-between items-center sticky top-0 bg-white z-10 rounded-t-xl"><h2 className="font-bold text-slate-800">Master Data</h2><div className="flex gap-2">{products.length === 0 && <button onClick={handleSeedData} className="text-xs text-indigo-600 underline">Dummy</button>}<button onClick={() => setShowResetConfirm(true)} className="text-xs text-red-500 underline">Reset</button><button onClick={() => { resetForm(); setShowAddModal(true); }} className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex gap-1 items-center"><Icons.Plus/> Barang</button></div></div>
-                                                    <div className="p-2 bg-slate-50"><input type="text" placeholder="Cari..." className="w-full px-3 py-2 bg-white border rounded-lg text-sm" value={adminSearchQuery} onChange={e=>setAdminSearchQuery(e.target.value)}/></div>
-                                                    <table className="w-full text-xs text-left"><thead className="bg-slate-100 text-slate-600"><tr><th className="p-3">Produk</th><th className="p-3 text-right">Harga</th><th className="p-3 text-center">Stok</th><th className="p-3 text-center">Aksi</th></tr></thead><tbody className="divide-y">{filteredAdminProducts.map(p => (<tr key={p.id}><td className="p-3"><div className="font-bold">{p.name}</div><div className="text-[10px] text-gray-400 uppercase">{p.category}</div></td><td className="p-3 text-right font-bold text-indigo-600">{formatRupiah(p.price).replace(",00","")}</td><td className="p-3 text-center font-bold text-slate-700">{p.stock}</td><td className="p-3 text-center flex justify-center gap-2"><button onClick={()=> prepareEdit(p)} className="text-blue-600"><Icons.Edit3/></button><button onClick={()=> { if(confirm("Hapus?")) db.collection('products').doc(p.id).delete(); }} className="text-red-600"><Icons.Trash2/></button></td></tr>))}</tbody></table>
+                                                    
+                                                    {/* NEW: SEARCH & FILTER BAR */}
+                                                    <div className="p-2 bg-slate-50 flex gap-2">
+                                                        <div className="relative flex-1"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><Icons.Search/></span><input type="text" placeholder="Cari..." className="w-full pl-10 pr-3 py-2 bg-white border rounded-lg text-sm outline-none" value={adminSearchQuery} onChange={e=>setAdminSearchQuery(e.target.value)}/></div>
+                                                        <button onClick={() => setShowLowStockOnly(!showLowStockOnly)} className={`px-3 rounded-lg border flex items-center gap-2 font-bold text-xs transition-colors ${showLowStockOnly ? 'bg-orange-100 text-orange-600 border-orange-200' : 'bg-white text-gray-500 border-gray-200'}`}>
+                                                            <Icons.AlertTriangle/> <span className="hidden sm:inline">Stok Menipis</span>
+                                                        </button>
+                                                    </div>
+                                                    
+                                                    <table className="w-full text-xs text-left"><thead className="bg-slate-100 text-slate-600"><tr><th className="p-3">Produk</th><th className="p-3 text-right">Harga</th><th className="p-3 text-center">Stok</th><th className="p-3 text-center">Aksi</th></tr></thead><tbody className="divide-y">{filteredAdminProducts.map(p => (<tr key={p.id}><td className="p-3"><div className="font-bold">{p.name}</div><div className="text-[10px] text-gray-400 uppercase">{p.category}</div></td><td className="p-3 text-right font-bold text-indigo-600">{formatRupiah(p.price).replace(",00","")}</td><td className={`p-3 text-center font-bold ${p.stock < 5 ? 'text-red-500' : 'text-slate-700'}`}>{p.stock}</td><td className="p-3 text-center flex justify-center gap-2"><button onClick={()=> prepareEdit(p)} className="text-blue-600"><Icons.Edit3/></button><button onClick={()=> { if(confirm("Hapus?")) db.collection('products').doc(p.id).delete(); }} className="text-red-600"><Icons.Trash2/></button></td></tr>))}</tbody></table>
+                                                    {filteredAdminProducts.length === 0 && <div className="p-6 text-center text-gray-400 text-xs italic">Tidak ada data produk.</div>}
                                                 </div>
                                             )}
 
