@@ -74,20 +74,21 @@
 
         const { useState, useMemo, useRef, useEffect } = React;
 
-        // --- REAL PHOTO ICONS (V3.9) ---
-        // Menggunakan <img> tag dengan fallback ke logo jika gambar tidak ditemukan
+        // --- REAL PHOTO ICONS (BIG SIZE) ---
         const CategoryImage = ({ src, alt }) => (
-            <div className="w-full h-full rounded-lg overflow-hidden shadow-inner border border-gray-100 bg-white">
+            <div className="w-full h-full rounded-xl overflow-hidden shadow-sm border border-gray-100 bg-white relative group">
                 <img 
                     src={src} 
                     alt={alt} 
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover transform transition-transform duration-500 group-hover:scale-110"
                     onError={(e) => {
                         e.target.onerror = null; 
-                        e.target.src = LOGO_FILENAME; // Fallback ke logo jika file tidak ada
-                        e.target.className = "w-full h-full object-contain p-2 opacity-50"; // Style beda buat fallback
+                        e.target.src = LOGO_FILENAME; 
+                        e.target.className = "w-full h-full object-contain p-4 opacity-30"; 
                     }}
                 />
+                {/* Gradient overlay biar teks putih kebaca */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             </div>
         );
 
@@ -97,7 +98,7 @@
             Sembako: () => <CategoryImage src="sembako.jpg" alt="Sembako" />,
             Rokok: () => <CategoryImage src="rokok.jpg" alt="Rokok" />,
             Harian: () => <CategoryImage src="harian.jpg" alt="Harian" />,
-            Umum: () => <CategoryImage src="logo.png" alt="Umum" /> // Default pake logo
+            Umum: () => <CategoryImage src="logo.png" alt="Umum" /> 
         };
 
         const Icons = {
@@ -577,18 +578,31 @@
                                             </div>
                                             <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">{CATEGORIES.map(cat => <button key={cat.id} onClick={() => setActiveCategory(cat.id)} className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${activeCategory === cat.id ? 'bg-indigo-600 text-white shadow' : 'bg-white border text-slate-600'}`}>{cat.label}</button>)}</div>
                                         </div>
+                                        
+                                        {/* GRID PRODUK YANG DIPERBESAR (V3.9.1) */}
                                         <div className="flex-1 overflow-y-auto p-3 pb-24 md:pb-4">
-                                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4">
+                                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4"> 
+                                                {/* Gap ditambah dikit biar lega */}
                                                 {filteredProducts.map(p => {
                                                     const stock = Number(p.stock) || 0;
                                                     return (
-                                                        <button key={p.id} onClick={() => addToCart(p)} disabled={stock<=0} className={`bg-white rounded-xl shadow-sm border p-2 text-left flex flex-col gap-2 relative overflow-hidden active:scale-95 transition-all ${stock<=0?'opacity-50':''}`}>
-                                                            <div className="w-full aspect-square flex items-center justify-center p-2 bg-gray-50 rounded-lg"><div className="w-10 h-10 md:w-16 md:h-16">{renderProductIcon(p.category)}</div></div>
-                                                            <span className={`absolute top-2 right-2 text-[10px] px-1.5 rounded text-white font-bold ${stock<10?'bg-red-500':'bg-green-500'}`}>{stock}</span>
-                                                            {stock <= 0 && <div className="absolute inset-0 bg-white/60 flex items-center justify-center text-xs font-bold text-red-600 uppercase tracking-widest border-2 border-red-500 m-2 rounded">HABIS</div>}
+                                                        <button key={p.id} onClick={() => addToCart(p)} disabled={stock<=0} className={`bg-white rounded-xl shadow-sm border p-2.5 text-left flex flex-col gap-2 relative overflow-hidden active:scale-95 transition-all ${stock<=0?'opacity-50':''}`}>
+                                                            {/* Ratio diperbesar jadi 4:3 (lebih tinggi) */}
+                                                            <div className="w-full aspect-[4/3] flex items-center justify-center p-0 rounded-lg overflow-hidden relative">
+                                                                {/* Icon dibuat full cover container */}
+                                                                <div className="w-full h-full transform transition-transform hover:scale-105">
+                                                                    {renderProductIcon(p.category)}
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            <span className={`absolute top-2 right-2 text-[10px] px-2 py-0.5 rounded text-white font-bold shadow-sm z-10 ${stock<10?'bg-red-500':'bg-green-500'}`}>{stock}</span>
+                                                            
+                                                            {stock <= 0 && <div className="absolute inset-0 bg-white/60 flex items-center justify-center text-sm font-bold text-red-600 uppercase tracking-widest border-2 border-red-500 m-2 rounded z-20">HABIS</div>}
+                                                            
                                                             <div>
-                                                                <h3 className="font-semibold text-xs text-gray-800 line-clamp-2 h-8">{p.name}</h3>
-                                                                <p className="font-bold text-indigo-600 text-sm">{formatRupiah(p.price).replace(",00","")}</p>
+                                                                {/* Font Judul dibesarkan sedikit */}
+                                                                <h3 className="font-bold text-sm text-gray-800 line-clamp-2 leading-tight h-9">{p.name}</h3>
+                                                                <p className="font-bold text-indigo-600 text-sm mt-1">{formatRupiah(p.price).replace(",00","")}</p>
                                                             </div>
                                                         </button>
                                                     );
