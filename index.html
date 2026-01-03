@@ -126,7 +126,7 @@
         // --- SETUP FIREBASE ---
         const LOGO_FILENAME = "logo.png"; 
         const APP_NAME = "Warung Alesha";
-        const STORE_ADDRESS = "Jl. Berkah No. 99, Semarang";
+        const STORE_ADDRESS = "Dk. Cangkrigan, Ds. Tambaharjo, Kec. Adimulyo, Kab. Kebumen";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCDFvM0VD52Bq5JWj5rmO4hMaIAtHvaIXc",
@@ -252,7 +252,8 @@
             const [resetPassword, setResetPassword] = useState("");
             
             const [restockItem, setRestockItem] = useState(null);
-            const [restockData, setRestockData] = useState({ qty: '', totalCost: '' });
+            // ADDED: priceUpdate, priceStoreUpdate, priceVipUpdate to restockData (V4.3)
+            const [restockData, setRestockData] = useState({ qty: '', totalCost: '', priceUpdate: '', priceStoreUpdate: '', priceVipUpdate: '' });
             
             const [reportFilter, setReportFilter] = useState('today'); 
             const [reportStats, setReportStats] = useState({ omset: 0, profit: 0, itemsSold: 0 });
@@ -392,7 +393,14 @@
                 } else if (scanMode === 'restock') {
                     if (product) {
                         setRestockItem(product);
-                        setRestockData({ qty: '', totalCost: '' });
+                        // INIT RESTOCK DATA WITH CURRENT PRICES (V4.3)
+                        setRestockData({ 
+                            qty: '', 
+                            totalCost: '',
+                            priceUpdate: product.price || '',
+                            priceStoreUpdate: product.priceStore || '',
+                            priceVipUpdate: product.priceVip || ''
+                        });
                     } else {
                         setToast({ msg: "Produk belum terdaftar! Tambah dulu di menu Stok.", type: "error" });
                     }
@@ -584,17 +592,42 @@
                 setShowAddModal(false); resetForm();
             };
             
+            // --- SMART RESTOCK (V4.3 - UPDATE PRICE & MODAL) ---
             const handleRestockSubmit = async (e) => {
                 e.preventDefault();
                 if (!restockItem) return;
+                
                 const qty = parseInt(restockData.qty);
                 const totalCost = parseInt(restockData.totalCost);
                 if (qty <= 0 || totalCost <= 0) { alert("Jumlah dan Modal harus diisi!"); return; }
+
                 const newUnitCost = Math.ceil(totalCost / qty);
+
+                // Prepare Updates
+                const updates = {
+                    stock: firebase.firestore.FieldValue.increment(qty),
+                    cost: newUnitCost
+                };
+
+                // Check Price Updates (Only update if user changed the value)
+                if (restockData.priceUpdate && Number(restockData.priceUpdate) !== restockItem.price) {
+                    updates.price = Number(restockData.priceUpdate);
+                }
+                if (restockData.priceStoreUpdate && Number(restockData.priceStoreUpdate) !== restockItem.priceStore) {
+                    updates.priceStore = Number(restockData.priceStoreUpdate);
+                }
+                if (restockData.priceVipUpdate && Number(restockData.priceVipUpdate) !== restockItem.priceVip) {
+                    updates.priceVip = Number(restockData.priceVipUpdate);
+                }
+
                 try {
                     const batch = db.batch();
+                    
+                    // 1. Update Product Master
                     const productRef = db.collection('products').doc(restockItem.id);
-                    batch.update(productRef, { stock: firebase.firestore.FieldValue.increment(qty), cost: newUnitCost });
+                    batch.update(productRef, updates);
+
+                    // 2. Record Purchase History
                     const purchaseRef = db.collection('purchases').doc();
                     batch.set(purchaseRef, {
                         date: new Date().toISOString(),
@@ -605,8 +638,9 @@
                         unitCost: newUnitCost,
                         timestamp: firebase.firestore.FieldValue.serverTimestamp()
                     });
+
                     await batch.commit();
-                    setToast({ msg: `Stok ${restockItem.name} +${qty}`, type: "success" });
+                    setToast({ msg: `Stok +${qty} & Harga Diupdate!`, type: "success" });
                     setRestockItem(null);
                 } catch(e) { alert("Gagal Restock: " + e.message); }
             };
@@ -839,7 +873,7 @@
                                                 </div>
                                             )}
 
-                                            {/* TAB RESTOCK / KULAKAN */}
+                                            {/* TAB RESTOCK / KULAKAN (UPDATED V4.3) */}
                                             {adminTab === 'restock' && (
                                                 <div className="bg-white rounded-xl shadow-sm border p-4">
                                                     <h3 className="font-bold text-lg mb-4 text-indigo-600 flex items-center gap-2"><Icons.ShoppingBag/> Kulakan / Belanja Stok</h3>
@@ -852,7 +886,7 @@
                                                             </div>
                                                             <div className="max-h-80 overflow-y-auto border rounded-lg divide-y">
                                                                 {filteredAdminProducts.map(p => (
-                                                                    <button key={p.id} onClick={() => { setRestockItem(p); setRestockData({ qty: '', totalCost: '' }); }} className="w-full p-3 text-left hover:bg-slate-50 flex justify-between items-center">
+                                                                    <button key={p.id} onClick={() => { setRestockItem(p); setRestockData({ qty: '', totalCost: '', priceUpdate: p.price, priceStoreUpdate: p.priceStore, priceVipUpdate: p.priceVip }); }} className="w-full p-3 text-left hover:bg-slate-50 flex justify-between items-center">
                                                                         <div><div className="font-bold text-sm">{p.name}</div><div className="text-xs text-gray-500">Stok: {p.stock} | Modal Saat Ini: {formatRupiah(p.cost).replace(",00","")}</div></div>
                                                                         <div className="text-indigo-600"><Icons.Plus/></div>
                                                                     </button>
@@ -866,20 +900,43 @@
                                                                 <button onClick={() => setRestockItem(null)} className="text-gray-400"><Icons.X/></button>
                                                             </div>
                                                             <form onSubmit={handleRestockSubmit} className="space-y-4">
-                                                                <div>
-                                                                    <label className="text-xs font-bold text-gray-500">Jumlah Beli (Pcs)</label>
-                                                                    <input type="number" autoFocus required className="w-full border p-3 rounded-lg font-bold text-lg outline-none focus:border-indigo-500" placeholder="0" value={restockData.qty} onChange={e => setRestockData({...restockData, qty: e.target.value})} />
+                                                                <div className="grid grid-cols-2 gap-3">
+                                                                    <div>
+                                                                        <label className="text-xs font-bold text-gray-500">Jumlah Beli</label>
+                                                                        <input type="number" autoFocus required className="w-full border p-3 rounded-lg font-bold text-lg outline-none focus:border-indigo-500" placeholder="0" value={restockData.qty} onChange={e => setRestockData({...restockData, qty: e.target.value})} />
+                                                                    </div>
+                                                                    <div>
+                                                                        <label className="text-xs font-bold text-gray-500">Total Modal (Rp)</label>
+                                                                        <input type="number" required className="w-full border p-3 rounded-lg font-bold text-lg outline-none focus:border-indigo-500" placeholder="0" value={restockData.totalCost} onChange={e => setRestockData({...restockData, totalCost: e.target.value})} />
+                                                                    </div>
                                                                 </div>
-                                                                <div>
-                                                                    <label className="text-xs font-bold text-gray-500">Total Keluar Duit (Rp)</label>
-                                                                    <input type="number" required className="w-full border p-3 rounded-lg font-bold text-lg outline-none focus:border-indigo-500" placeholder="0" value={restockData.totalCost} onChange={e => setRestockData({...restockData, totalCost: e.target.value})} />
-                                                                    {restockData.qty > 0 && restockData.totalCost > 0 && (
-                                                                        <div className="mt-2 text-xs text-emerald-600 font-bold bg-emerald-50 p-2 rounded">
-                                                                            Harga Modal Baru: {formatRupiah(Math.ceil(restockData.totalCost / restockData.qty)).replace(",00","")} /pcs
+                                                                
+                                                                {restockData.qty > 0 && restockData.totalCost > 0 && (
+                                                                    <div className="mt-2 text-xs text-emerald-600 font-bold bg-emerald-50 p-2 rounded text-center">
+                                                                        Modal Baru: {formatRupiah(Math.ceil(restockData.totalCost / restockData.qty)).replace(",00","")} /pcs
+                                                                    </div>
+                                                                )}
+
+                                                                {/* SMART PRICE UPDATE SECTION */}
+                                                                <div className="border-t pt-3 mt-3">
+                                                                    <label className="text-xs font-bold text-indigo-600 uppercase mb-2 block">Update Harga Jual (Opsional)</label>
+                                                                    <div className="space-y-2">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="text-xs w-16">Eceran:</span>
+                                                                            <input type="number" className="flex-1 border p-2 rounded text-sm" placeholder="Tetap" value={restockData.priceUpdate} onChange={e => setRestockData({...restockData, priceUpdate: e.target.value})} />
                                                                         </div>
-                                                                    )}
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="text-xs w-16">Toko:</span>
+                                                                            <input type="number" className="flex-1 border p-2 rounded text-sm bg-orange-50" placeholder="Tetap" value={restockData.priceStoreUpdate} onChange={e => setRestockData({...restockData, priceStoreUpdate: e.target.value})} />
+                                                                        </div>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="text-xs w-16">VIP:</span>
+                                                                            <input type="number" className="flex-1 border p-2 rounded text-sm bg-purple-50" placeholder="Tetap" value={restockData.priceVipUpdate} onChange={e => setRestockData({...restockData, priceVipUpdate: e.target.value})} />
+                                                                        </div>
+                                                                    </div>
                                                                 </div>
-                                                                <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700">Simpan Stok Masuk</button>
+
+                                                                <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 shadow-lg">Simpan Stok & Harga</button>
                                                             </form>
                                                         </div>
                                                     )}
